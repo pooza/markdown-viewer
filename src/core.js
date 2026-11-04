@@ -242,6 +242,26 @@
     };
   }
 
+  // 表示の幅の目安（半角 1・全角 2）
+  function displayWidth(text) {
+    let width = 0;
+    for (const ch of text) {
+      const code = ch.codePointAt(0);
+      width += code <= 0xff || (code >= 0xff61 && code <= 0xff9f) ? 1 : 2;
+    }
+    return width;
+  }
+
+  // どのセルも幅が limit 以下の列の番号（0 始まり）。rows はセルの文字列の配列の配列
+  function shortColumns(rows, limit) {
+    const count = Math.max(0, ...rows.map((r) => r.length));
+    const result = [];
+    for (let i = 0; i < count; i++) {
+      if (rows.every((r) => i >= r.length || displayWidth(r[i]) <= limit)) result.push(i);
+    }
+    return result;
+  }
+
   const api = {
     decodeBytes,
     decodeFileName,
@@ -260,6 +280,8 @@
     listDirectory,
     slugify,
     createSlugger,
+    displayWidth,
+    shortColumns,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
