@@ -55,5 +55,7 @@ PR には ChatGPT Codex のレビューが付く。扱い方は ginseng-style �
   `gh api repos/pooza/ginseng-style/contents/plugins/ginseng/skills/codex-review/SKILL.md -H "Accept: application/vnd.github.raw"`
 - 要点: 4 経路（review・inline・issue コメント・リアクション）を走査する／👀 と要約コメントは成果物ではない／
   指摘には返信と 👍 / 👎 の両方を付ける／閉じる前にもう一度走査する
+- ⚠ **P2 は出されたものを 1 回直して返信するだけ。`@codex review` で頼み直さない。** 頼み直して繰り返すのは P1 のときだけ。
+  繰り返すと P2 の質が際限なく下がり、時間ばかりかかる（codex-review スキルの「再走査」よりこちらを優先する）
 - 待機は `node scripts/codex-wait.mjs pooza/markdown-viewer <PR 番号> [基点JSON]`（jq の無い Windows でも動く）。
   基点は、レビューを起こす前（自分の返信より前）の件数を採る。最後の行が `DONE` / `TIMEOUT`、gh が失敗したら exit 2
