@@ -1,5 +1,7 @@
 # Markdown Viewer
 
+[![test](https://github.com/pooza/markdown-viewer/actions/workflows/test.yml/badge.svg)](https://github.com/pooza/markdown-viewer/actions/workflows/test.yml)
+
 Markdown の文書一式（zip かフォルダ）を、ブラウザだけで読むための 1 枚の HTML。
 **ネットにつながらない環境で使える**よう、ライブラリはすべて HTML に埋め込んである。
 
@@ -43,7 +45,7 @@ biome.json          整形と Lint の設定
 
 ## 作り直す・確かめる
 
-Node.js 18 以上が要る。ビルドとテストはネットを使わない（`npm install` だけは Biome の取得にネットが要る）。
+Node.js 22 以上が要る。ビルドとテストはネットを使わない（`npm install` だけは Biome の取得にネットが要る）。
 
 ```sh
 npm install                     # 開発用の道具（Biome）を入れる。ビルドとテストだけなら不要
@@ -56,6 +58,10 @@ npm run lint                    # Biome で整形と Lint を確かめる（lint
 
 `smoke` は、CP932 のファイル名・CRLF・XSS を仕込んだ zip を作って読み込ませ、21 項目を確かめる。
 ドラッグ＆ドロップとフォルダ選択は自動では確かめていない（人が操作して確かめる）。
+
+main・develop への push と Pull Request では、GitHub Actions（`.github/workflows/test.yml`）が同じことを行う。
+lint・単体テスト・ビルドは Ubuntu、`smoke` は Edge の入っている Windows の Runner で動く。
+そこでビルドした版は実行結果の Artifacts から取れる。
 
 整形と Lint は [Biome](https://biomejs.dev/)。設定は `biome.json`（2 スペース、1 行 100 桁、シングルクォート、末尾カンマあり）。
 `src/` はモジュールではない普通の script なので `'use strict'` を残す（`noRedundantUseStrict` を切っている）。

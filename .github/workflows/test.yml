@@ -1,0 +1,41 @@
+name: test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # 整形・Lint、同梱ライブラリのハッシュ、単体テスト、ビルド
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run vendor:check
+      - run: npm test
+      - run: npm run build
+
+  # ビルド版をネット遮断のヘッドレス Edge で開いて確かめる。
+  # Windows の Runner には Edge が入っているので、手元と同じ test/smoke.mjs がそのまま動く
+  smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm run smoke
+      - uses: actions/upload-artifact@v7
+        with:
+          name: markdown-viewer
+          path: dist/markdown-viewer.html
+          if-no-files-found: error
