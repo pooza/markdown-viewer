@@ -1,6 +1,6 @@
 {
   "name": "markdown-viewer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ネットにつながらない環境でも使える、1 枚の HTML の Markdown ビューア（zip・フォルダ・Mermaid 対応）",
   "private": true,
   "license": "MIT",
