@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Viewer</title>
+    <!--
+      バージョンを固定。CDN側の更新で壊れるのを防ぐ。
+      marked は v5 以降 marked.min.js が存在せず、UMD ビルドは lib/marked.umd.js。
+      バージョン無指定の .../npm/marked/marked.min.js は 404 になるので使わないこと。
+      いずれの URL も 2026-09-07 に HTTP 200 を確認済み。
+    -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.11/lib/marked.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 280px;
+            background: #f6f8fa;
+            border-right: 1px solid #d0d7de;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #file-input-container {
+            padding: 16px;
+            border-bottom: 1px solid #d0d7de;
+        }
+
+        #file-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #search-box {
+            width: 100%;
+            margin-top: 8px;
+            padding: 8px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        #file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .folder {
+            margin-bottom: 4px;
+        }
+
+        .folder-header {
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            user-select: none;
+        }
+
+        .folder-header:hover {
+            background: #e1e4e8;
+        }
+
+        .folder-icon {
+            margin-right: 6px;
+            font-size: 12px;
+            width: 16px;
+            display: inline-block;
+        }
+
+        .folder-content {
+            margin-left: 16px;
+            display: none;
+        }
+
+        .folder-content.open {
+            display: block;
+        }
+
+        .file-item {
+            padding: 6px 8px 6px 24px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-bottom: 2px;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .file-item:hover {
+            background: #e1e4e8;
+        }
+
+        .file-item.active {
+            background: #0969da;
+            color: white;
+        }
+
+        .file-item.readme {
+            font-weight: bold;
+        }
+
+        #content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+        }
+
+        #markdown-content {
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        /* Markdown スタイル */
+        #markdown-content h1 {
+            font-size: 2em;
+            border-bottom: 1px solid #d0d7de;
+            padding-bottom: 0.3em;
+            margin-bottom: 16px;
+            margin-top: 24px;
+        }
+
+        #markdown-content h2 {
+            font-size: 1.5em;
+            border-bottom: 1px solid #d0d7de;
+            padding-bottom: 0.3em;
+            margin-bottom: 16px;
+            margin-top: 24px;
+        }
+
+        #markdown-content h3 {
+            font-size: 1.25em;
+            margin-bottom: 16px;
+            margin-top: 24px;
+        }
+
+        #markdown-content h4, #markdown-content h5, #markdown-content h6 {
+            margin-bottom: 16px;
+            margin-top: 24px;
+        }
+
+        #markdown-content p {
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        #markdown-content ul, #markdown-content ol {
+            margin-bottom: 16px;
+            padding-left: 2em;
+        }
+
+        #markdown-content li {
+            margin-bottom: 4px;
+        }
+
+        #markdown-content code {
+            background: #f6f8fa;
+            padding: 0.2em 0.4em;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 85%;
+        }
+
+        #markdown-content pre {
+            background: #f6f8fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        #markdown-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        #markdown-content blockquote {
+            border-left: 4px solid #d0d7de;
+            padding-left: 16px;
+            margin-bottom: 16px;
+            color: #57606a;
+        }
+
+        #markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        #markdown-content table th,
+        #markdown-content table td {
+            border: 1px solid #d0d7de;
+            padding: 8px 13px;
+        }
+
+        #markdown-content table th {
+            background: #f6f8fa;
+            font-weight: bold;
+        }
+
+        #markdown-content img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        #markdown-content a {
+            color: #0969da;
+            text-decoration: none;
+        }
+
+        #markdown-content a:hover {
+            text-decoration: underline;
+        }
+
+        #markdown-content a.broken-link {
+            color: #d1242f;
+            cursor: help;
+            border-bottom: 1px dotted #d1242f;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 40px;
+            color: #57606a;
+        }
+
+        .error {
+            color: #d1242f;
+            padding: 16px;
+            background: #fff1f0;
+            border-radius: 6px;
+            margin: 16px;
+        }
+
+        .warn-banner {
+            color: #9a6700;
+            background: #fff8c5;
+            border: 1px solid #d4a72c;
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div id="file-input-container">
+            <input type="file" id="file-input" accept=".zip" />
+            <input type="text" id="search-box" placeholder="ファイル名で絞り込み" />
+        </div>
+        <div id="file-list"></div>
+    </div>
+    <div id="content">
+        <div id="markdown-content">
+            <div id="loading">zipファイルを選択してください</div>
+        </div>
+    </div>
+
+    <script>
+        let zipData = null;
+        let currentPath = null;      // いま開いている .md のパス
+        let markdownFiles = [];
+        let imageCache = {};
+        let folderStates = {};       // フォルダの開閉状態を保存
+        let searchFilter = '';
+
+        // Mermaid初期化（読み込めていない場合も動作を止めない）
+        const hasMermaid = typeof mermaid !== 'undefined';
+        if (hasMermaid) {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default'
+            });
+        }
+
+        // 必須ライブラリの読み込み確認。
+        // CDN に到達できない環境では、原因が分かるメッセージを出す。
+        (function checkLibraries() {
+            const missing = [];
+            if (typeof JSZip === 'undefined') missing.push('JSZip (zip の読み込み)');
+            if (typeof marked === 'undefined') missing.push('marked (Markdown の描画)');
+
+            if (missing.length > 0) {
+                document.getElementById('markdown-content').innerHTML = '';
+                const div = document.createElement('div');
+                div.className = 'error';
+                div.innerHTML =
+                    '<b>必要なライブラリを読み込めませんでした。</b><br><br>' +
+                    missing.map(m => '・' + m).join('<br>') +
+                    '<br><br>CDN (cdnjs.cloudflare.com / cdn.jsdelivr.net) に' +
+                    'アクセスできない環境の可能性があります。<br>' +
+                    'ネットワーク制限がある場合は、ライブラリを HTML に直接埋め込んだ版が必要です。';
+                document.getElementById('markdown-content').appendChild(div);
+                document.getElementById('file-input').disabled = true;
+            }
+        })();
+
+        // ファイル選択
+        document.getElementById('file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                zipData = await JSZip.loadAsync(arrayBuffer);
+                await loadFileList();
+
+                // README.mdを探して開く
+                const readmePath = findReadme();
+                if (readmePath) {
+                    await loadMarkdown(readmePath);
+                } else {
+                    showError('zip内に .md ファイルが見つかりませんでした。');
+                }
+            } catch (error) {
+                showError('zipファイルの読み込みに失敗しました: ' + error.message);
+            }
+        });
+
+        // 検索ボックス
+        document.getElementById('search-box').addEventListener('input', (e) => {
+            searchFilter = e.target.value.trim().toLowerCase();
+            displayFileList();
+        });
+
+        // ファイルリスト読み込み
+        // 修正: 画像の base64 変換を await する（従来は競合し、初回表示で画像が出ないことがあった）
+        async function loadFileList() {
+            markdownFiles = [];
+            imageCache = {};
+
+            const imageTasks = [];
+
+            zipData.forEach((relativePath, file) => {
+                if (file.dir) return;
+
+                if (relativePath.endsWith('.md')) {
+                    markdownFiles.push(relativePath);
+                } else if (/\.(png|jpg|jpeg|gif|svg|webp)$/i.test(relativePath)) {
+                    const task = file.async('base64').then(base64 => {
+                        const ext = relativePath.split('.').pop().toLowerCase();
+                        const mimeType = {
+                            'png': 'image/png',
+                            'jpg': 'image/jpeg',
+                            'jpeg': 'image/jpeg',
+                            'gif': 'image/gif',
+                            'svg': 'image/svg+xml',
+                            'webp': 'image/webp'
+                        }[ext] || 'image/png';
+                        imageCache[relativePath] = `data:${mimeType};base64,${base64}`;
+                    });
+                    imageTasks.push(task);
+                }
+            });
+
+            await Promise.all(imageTasks);
+
+            markdownFiles.sort();
+            displayFileList();
+        }
+
+        // ファイルリスト表示
+        function displayFileList() {
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+
+            const files = searchFilter
+                ? markdownFiles.filter(p => p.toLowerCase().includes(searchFilter))
+                : markdownFiles;
+
+            const tree = buildTree(files);
+            renderTree(tree, fileList, '');
+        }
+
+        // ツリー構造を構築
+        function buildTree(files) {
+            const tree = {};
+
+            files.forEach(path => {
+                const parts = path.split('/');
+                let current = tree;
+
+                parts.forEach((part, index) => {
+                    if (index === parts.length - 1) {
+                        if (!current._files) current._files = [];
+                        current._files.push(path);
+                    } else {
+                        if (!current[part]) current[part] = {};
+                        current = current[part];
+                    }
+                });
+            });
+
+            return tree;
+        }
+
+        // ツリーを再帰的に表示
+        // 修正: 第3引数を folderPath に改名。従来はグローバルの currentPath を
+        //       シャドーイングしており、選択中ファイルのハイライトが機能していなかった。
+        function renderTree(node, container, folderPath) {
+            const folders = Object.keys(node).filter(k => k !== '_files').sort();
+            folders.forEach(folder => {
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'folder';
+
+                const header = document.createElement('div');
+                header.className = 'folder-header';
+
+                const thisPath = folderPath ? `${folderPath}/${folder}` : folder;
+
+                // 検索中、または選択中ファイルを含むフォルダは自動的に開く
+                const containsCurrent = currentPath && currentPath.startsWith(thisPath + '/');
+                const isOpen = !!searchFilter || containsCurrent || folderStates[thisPath] || false;
+
+                header.innerHTML = `<span class="folder-icon">${isOpen ? '▼' : '▶'}</span>${folder}`;
+
+                const content = document.createElement('div');
+                content.className = `folder-content${isOpen ? ' open' : ''}`;
+
+                header.onclick = () => {
+                    const willBeOpen = !content.classList.contains('open');
+                    content.classList.toggle('open');
+                    header.querySelector('.folder-icon').textContent = willBeOpen ? '▼' : '▶';
+                    folderStates[thisPath] = willBeOpen;
+                };
+
+                folderDiv.appendChild(header);
+                folderDiv.appendChild(content);
+                container.appendChild(folderDiv);
+
+                renderTree(node[folder], content, thisPath);
+            });
+
+            if (node._files) {
+                node._files.sort().forEach(path => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+
+                    const fileName = path.split('/').pop();
+                    if (fileName.toLowerCase() === 'readme.md') {
+                        div.classList.add('readme');
+                    }
+                    if (path === currentPath) {
+                        div.classList.add('active');
+                    }
+
+                    div.textContent = fileName;
+                    div.title = path;
+                    div.onclick = () => loadMarkdown(path);
+                    container.appendChild(div);
+                });
+            }
+        }
+
+        // README.mdを探す
+        function findReadme() {
+            const rootReadme = markdownFiles.find(f => f.toLowerCase() === 'readme.md');
+            if (rootReadme) return rootReadme;
+
+            const anyReadme = markdownFiles.find(f => f.toLowerCase().endsWith('readme.md'));
+            if (anyReadme) return anyReadme;
+
+            return markdownFiles[0];
+        }
+
+        // Markdownファイル読み込み
+        async function loadMarkdown(path) {
+            try {
+                const file = zipData.file(path);
+                if (!file) {
+                    showError('ファイルが見つかりません: ' + path);
+                    return;
+                }
+
+                const content = await file.async('string');
+                currentPath = path;
+
+                // currentPath 更新後に再描画（ハイライトと自動展開を反映）
+                displayFileList();
+
+                await renderMarkdown(content, path);
+            } catch (error) {
+                showError('ファイルの読み込みに失敗しました: ' + error.message);
+            }
+        }
+
+        // Markdown レンダリング
+        // 修正: marked の renderer をオーバーライドせず、描画後の DOM を後処理する。
+        //       marked は v5 で renderer の引数仕様が変わっており、
+        //       オーバーライド方式はバージョン更新で壊れるため。
+        async function renderMarkdown(content, filePath) {
+            const container = document.getElementById('markdown-content');
+
+            // Mermaidコードブロックを一時的に退避
+            const mermaidBlocks = [];
+            const prepared = content.replace(/```mermaid\r?\n([\s\S]*?)```/g, (match, code) => {
+                const id = `mermaid-${mermaidBlocks.length}`;
+                mermaidBlocks.push({ id, code: code.trim() });
+                return `<div class="mermaid-placeholder" data-id="${id}"></div>`;
+            });
+
+            let html;
+            try {
+                html = marked.parse(prepared);
+            } catch (error) {
+                showError('Markdownの解析に失敗しました: ' + error.message);
+                return;
+            }
+
+            container.innerHTML = html;
+
+            if (!hasMermaid && mermaidBlocks.length > 0) {
+                const banner = document.createElement('div');
+                banner.className = 'warn-banner';
+                banner.textContent = 'Mermaidライブラリを読み込めなかったため、図は表示されません（ネットワーク制限の可能性）。';
+                container.prepend(banner);
+            }
+
+            const currentDir = filePath.substring(0, filePath.lastIndexOf('/') + 1);
+
+            // --- リンクの後処理 ---
+            container.querySelectorAll('a[href]').forEach(a => {
+                const rawHref = a.getAttribute('href');
+                if (!rawHref) return;
+
+                // 外部リンク・ページ内アンカーはそのまま
+                if (/^(https?:)?\/\//i.test(rawHref) || rawHref.startsWith('mailto:') || rawHref.startsWith('#')) {
+                    return;
+                }
+
+                let decoded;
+                try {
+                    decoded = decodeURIComponent(rawHref);
+                } catch (e) {
+                    decoded = rawHref;
+                }
+
+                // アンカー部分を切り離す
+                const hashIndex = decoded.indexOf('#');
+                const pathPart = hashIndex >= 0 ? decoded.substring(0, hashIndex) : decoded;
+
+                if (!pathPart.endsWith('.md')) return;
+
+                const resolved = resolvePath(currentDir, pathPart);
+
+                let target = null;
+                if (markdownFiles.includes(resolved)) {
+                    target = resolved;
+                } else {
+                    // ファイル名のみで再検索（パスがずれている場合の救済）
+                    const fileName = resolved.split('/').pop();
+                    target = markdownFiles.find(f => f === fileName || f.endsWith('/' + fileName)) || null;
+                }
+
+                if (target) {
+                    a.setAttribute('href', '#');
+                    a.dataset.internal = target;
+                } else {
+                    // リンク切れを可視化する（黙って壊れているより良い）
+                    a.classList.add('broken-link');
+                    a.setAttribute('href', '#');
+                    a.title = 'リンク先がzip内に見つかりません: ' + resolved;
+                    a.addEventListener('click', (e) => e.preventDefault());
+                }
+            });
+
+            // --- 画像の後処理 ---
+            container.querySelectorAll('img[src]').forEach(img => {
+                const rawSrc = img.getAttribute('src');
+                if (!rawSrc) return;
+
+                if (/^(https?:)?\/\//i.test(rawSrc) || rawSrc.startsWith('data:')) {
+                    return;
+                }
+
+                let decoded;
+                try {
+                    decoded = decodeURIComponent(rawSrc);
+                } catch (e) {
+                    decoded = rawSrc;
+                }
+
+                const resolved = resolvePath(currentDir, decoded);
+                if (imageCache[resolved]) {
+                    img.setAttribute('src', imageCache[resolved]);
+                }
+            });
+
+            // --- Mermaid描画 ---
+            for (const block of mermaidBlocks) {
+                const placeholder = container.querySelector(`[data-id="${block.id}"]`);
+                if (placeholder) {
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = block.code;
+                    placeholder.replaceWith(div);
+                }
+            }
+
+            if (hasMermaid && mermaidBlocks.length > 0) {
+                try {
+                    await mermaid.run({ querySelector: '.mermaid' });
+                } catch (error) {
+                    console.error('Mermaidの描画に失敗しました', error);
+                }
+            }
+
+            // 内部リンクのクリックハンドラ
+            container.querySelectorAll('a[data-internal]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loadMarkdown(link.dataset.internal);
+                });
+            });
+
+            document.getElementById('content').scrollTop = 0;
+        }
+
+        // 相対パス解決
+        function resolvePath(basePath, relativePath) {
+            // 先頭 / はzipルートからの絶対パスとして扱う
+            if (relativePath.startsWith('/')) {
+                return relativePath.substring(1);
+            }
+
+            const parts = basePath.split('/').filter(p => p);
+            const relParts = relativePath.split('/');
+
+            for (const part of relParts) {
+                if (part === '..') {
+                    parts.pop();
+                } else if (part !== '.' && part !== '') {
+                    parts.push(part);
+                }
+            }
+
+            return parts.join('/');
+        }
+
+        // エラー表示
+        function showError(message) {
+            const div = document.createElement('div');
+            div.className = 'error';
+            div.textContent = message;
+            const container = document.getElementById('markdown-content');
+            container.innerHTML = '';
+            container.appendChild(div);
+        }
+    </script>
+</body>
+</html>
