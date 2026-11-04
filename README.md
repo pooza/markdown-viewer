@@ -38,9 +38,11 @@ src/core.js         画面に依存しない処理（パス・文字コード・
 vendor/             同梱ライブラリ。版とハッシュは VERSIONS.json、ライセンスは licenses/
 scripts/build.mjs   src と vendor を 1 枚にまとめて dist/markdown-viewer.html を作る
 scripts/fetch-vendor.mjs  ライブラリの取得（版を上げるときだけ。ネットが要る）
+scripts/codex-wait.mjs    PR に付く Codex のレビューを待つ（作業用。CLAUDE.md を参照）
 test/               テスト
 package.json        版と npm run のコマンド
 biome.json          整形と Lint の設定
+CLAUDE.md           作業の決まりと落とし穴（Claude Code 向け）
 ```
 
 `dist/` はビルドで作るのでリポジトリには入れていない。
