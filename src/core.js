@@ -1,5 +1,5 @@
 // 画面に依存しない処理。ブラウザでは window.MdvCore、Node（テスト）では module.exports になる。
-(function (root) {
+((root) => {
   'use strict';
 
   // ---- 文字コード ---------------------------------------------------------
@@ -20,7 +20,7 @@
     }
     try {
       return { text: new TextDecoder('utf-8', { fatal: true }).decode(u8), encoding: 'utf-8' };
-    } catch (e) {
+    } catch (_e) {
       return { text: new TextDecoder('shift_jis').decode(u8), encoding: 'shift_jis' };
     }
   }
@@ -33,7 +33,10 @@
   // ---- パス ---------------------------------------------------------------
 
   function normalizePath(path) {
-    return path.replace(/\\/g, '/').replace(/^(\.\/)+/, '').replace(/^\/+/, '');
+    return path
+      .replace(/\\/g, '/')
+      .replace(/^(\.\/)+/, '')
+      .replace(/^\/+/, '');
   }
 
   function dirOf(path) {
@@ -63,7 +66,7 @@
   function safeDecode(s) {
     try {
       return decodeURIComponent(s);
-    } catch (e) {
+    } catch (_e) {
       return s;
     }
   }
@@ -101,11 +104,54 @@
     ico: 'image/x-icon',
   };
   const TEXT_EXTS = new Set([
-    'txt', 'text', 'log', 'csv', 'tsv', 'sql', 'json', 'xml', 'yml', 'yaml', 'toml', 'ini', 'cfg', 'conf',
-    'properties', 'env', 'js', 'mjs', 'cjs', 'ts', 'css', 'html', 'htm', 'rb', 'py', 'sh', 'bat', 'cmd',
-    'ps1', 'psm1', 'vbs', 'bas', 'cls', 'frm', 'gitignore', 'gitattributes', 'editorconfig', 'mmd',
+    'txt',
+    'text',
+    'log',
+    'csv',
+    'tsv',
+    'sql',
+    'json',
+    'xml',
+    'yml',
+    'yaml',
+    'toml',
+    'ini',
+    'cfg',
+    'conf',
+    'properties',
+    'env',
+    'js',
+    'mjs',
+    'cjs',
+    'ts',
+    'css',
+    'html',
+    'htm',
+    'rb',
+    'py',
+    'sh',
+    'bat',
+    'cmd',
+    'ps1',
+    'psm1',
+    'vbs',
+    'bas',
+    'cls',
+    'frm',
+    'gitignore',
+    'gitattributes',
+    'editorconfig',
+    'mmd',
   ]);
-  const TEXT_NAMES = new Set(['LICENSE', 'LICENCE', 'NOTICE', 'README', 'CHANGELOG', 'Makefile', 'Dockerfile']);
+  const TEXT_NAMES = new Set([
+    'LICENSE',
+    'LICENCE',
+    'NOTICE',
+    'README',
+    'CHANGELOG',
+    'Makefile',
+    'Dockerfile',
+  ]);
 
   function extOf(path) {
     const name = baseName(path);

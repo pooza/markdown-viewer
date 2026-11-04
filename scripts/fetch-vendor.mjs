@@ -4,7 +4,7 @@
 //   node scripts/fetch-vendor.mjs          取得して VERSIONS.json を書き直す
 //   node scripts/fetch-vendor.mjs --check  手元の vendor/ が VERSIONS.json と一致するか確かめる（ネット不要）
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -61,7 +61,14 @@ async function fetchAll() {
     const license = await download(lib.license);
     await writeFile(join(VENDOR, lib.file), body);
     await writeFile(join(VENDOR, 'licenses', `${lib.name}.txt`), license);
-    manifest.push({ name: lib.name, version: lib.version, file: lib.file, url: lib.url, bytes: body.length, sha256: sha256(body) });
+    manifest.push({
+      name: lib.name,
+      version: lib.version,
+      file: lib.file,
+      url: lib.url,
+      bytes: body.length,
+      sha256: sha256(body),
+    });
     console.log(`${lib.name}@${lib.version}  ${body.length} bytes`);
   }
   await writeFile(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);

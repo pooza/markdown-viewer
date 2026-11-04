@@ -1,5 +1,5 @@
 // 画面。zip・フォルダ・ドロップから「ファイルの集まり」を作り、Markdown を描く。
-(function () {
+(() => {
   'use strict';
 
   const C = window.MdvCore;
@@ -101,8 +101,12 @@
     const valid = entries.filter(Boolean);
     if (valid.length === 0) {
       // webkitGetAsEntry が使えない環境。ファイルだけ受け取る
-      if (plainFiles.length === 1 && /\.zip$/i.test(plainFiles[0].name)) return openZipFile(plainFiles[0]);
-      return openSource('ドロップしたファイル', fromFiles(plainFiles.map((f) => ({ path: f.name, file: f }))));
+      if (plainFiles.length === 1 && /\.zip$/i.test(plainFiles[0].name))
+        return openZipFile(plainFiles[0]);
+      return openSource(
+        'ドロップしたファイル',
+        fromFiles(plainFiles.map((f) => ({ path: f.name, file: f }))),
+      );
     }
     if (valid.length === 1 && valid[0].isFile && /\.zip$/i.test(valid[0].name)) {
       return openZipFile(await entryFile(valid[0]));
@@ -256,7 +260,11 @@
 
   // 新しい表示が使っている URL だけ残す
   function releaseObjectUrlsExcept(view) {
-    const used = new Set(Array.from(view.querySelectorAll('[src^="blob:"], [href^="blob:"]')).map((el) => el.getAttribute('src') || el.getAttribute('href')));
+    const used = new Set(
+      Array.from(view.querySelectorAll('[src^="blob:"], [href^="blob:"]')).map(
+        (el) => el.getAttribute('src') || el.getAttribute('href'),
+      ),
+    );
     const keep = [];
     for (const url of objectUrls) {
       if (used.has(url)) keep.push(url);
@@ -280,7 +288,9 @@
   function findAnchorTarget(root, anchor) {
     const candidates = [anchor, anchor.toLowerCase(), C.slugify(anchor)];
     for (const c of candidates) {
-      const el = root.querySelector(`[id="${CSS.escape(`user-content-${c}`)}"]`) || root.querySelector(`[id="${CSS.escape(c)}"]`);
+      const el =
+        root.querySelector(`[id="${CSS.escape(`user-content-${c}`)}"]`) ||
+        root.querySelector(`[id="${CSS.escape(c)}"]`);
       if (el) return el;
     }
     return null;
@@ -296,7 +306,8 @@
     const fragment = DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true });
     view.appendChild(fragment);
 
-    if (encoding !== 'utf-8') addNotice(view, `文字コードを ${encodingLabel(encoding)} として読みました。`);
+    if (encoding !== 'utf-8')
+      addNotice(view, `文字コードを ${encodingLabel(encoding)} として読みました。`);
 
     // 見出しに ID を振る
     const slugger = C.createSlugger();
@@ -348,7 +359,8 @@
         // 同じ文書の中の節
         a.setAttribute('href', '#');
         a.dataset.anchor = anchor;
-        if (anchor && !findAnchorTarget(view, anchor)) markBroken(a, `この文書に節が見つかりません: #${anchor}`);
+        if (anchor && !findAnchorTarget(view, anchor))
+          markBroken(a, `この文書に節が見つかりません: #${anchor}`);
         continue;
       }
 
@@ -461,7 +473,8 @@
   function addPath(view, path, encoding) {
     const div = document.createElement('div');
     div.className = 'doc-path';
-    div.textContent = encoding && encoding !== 'utf-8' ? `${path}（${encodingLabel(encoding)}）` : path;
+    div.textContent =
+      encoding && encoding !== 'utf-8' ? `${path}（${encodingLabel(encoding)}）` : path;
     view.appendChild(div);
   }
 
@@ -473,7 +486,9 @@
   }
 
   function encodingLabel(encoding) {
-    return { shift_jis: 'Shift_JIS', 'utf-16le': 'UTF-16', 'utf-16be': 'UTF-16' }[encoding] || encoding;
+    return (
+      { shift_jis: 'Shift_JIS', 'utf-16le': 'UTF-16', 'utf-16be': 'UTF-16' }[encoding] || encoding
+    );
   }
 
   // 文書内のリンク（一か所で受ける）
@@ -503,7 +518,9 @@
   function displayFileList() {
     const fileList = $('file-list');
     fileList.replaceChildren();
-    const files = searchFilter ? listedPaths.filter((p) => p.toLowerCase().includes(searchFilter)) : listedPaths;
+    const files = searchFilter
+      ? listedPaths.filter((p) => p.toLowerCase().includes(searchFilter))
+      : listedPaths;
     renderTree(buildTree(files), fileList, '');
     const active = fileList.querySelector('.file-item.active');
     if (active) active.scrollIntoView({ block: 'nearest' });
@@ -532,7 +549,8 @@
       const folderDiv = document.createElement('div');
       folderDiv.className = 'folder';
 
-      const containsCurrent = currentPath && (currentPath === thisPath || currentPath.startsWith(`${thisPath}/`));
+      const containsCurrent =
+        currentPath && (currentPath === thisPath || currentPath.startsWith(`${thisPath}/`));
       const isOpen = !!searchFilter || containsCurrent || folderStates[thisPath] || false;
 
       const header = document.createElement('div');
@@ -575,8 +593,8 @@
 
   $('about-link').addEventListener('click', (e) => {
     e.preventDefault();
-    const build = ($('build-info') || {}).textContent || '';
-    const licenses = ($('third-party-licenses') || {}).textContent || '';
+    const build = $('build-info')?.textContent || '';
+    const licenses = $('third-party-licenses')?.textContent || '';
     const view = document.createElement('div');
     const h1 = document.createElement('h1');
     h1.textContent = 'Markdown Viewer';
@@ -584,7 +602,9 @@
     p.textContent = build.includes('{{') ? '開発版（src/viewer.html）' : build;
     const pre = document.createElement('pre');
     pre.className = 'plain-text';
-    pre.textContent = licenses.trim() || '同梱ライブラリのライセンスはビルド版に埋め込まれます（vendor/licenses/）。';
+    pre.textContent =
+      licenses.trim() ||
+      '同梱ライブラリのライセンスはビルド版に埋め込まれます（vendor/licenses/）。';
     const h2 = document.createElement('h2');
     h2.textContent = '同梱ライブラリのライセンス';
     view.append(h1, p, h2, pre);
@@ -602,7 +622,7 @@
       await fn();
     } catch (error) {
       console.error(error);
-      showError(`読み込みに失敗しました: ${error && error.message ? error.message : error}`);
+      showError(`読み込みに失敗しました: ${error?.message ? error.message : error}`);
     }
   }
 
@@ -617,7 +637,8 @@
 
   // テストから使う入口
   window.MdvApp = {
-    openZipBuffer: (buffer, name) => fromZip(buffer).then((files) => openSource(name || 'test.zip', files)),
+    openZipBuffer: (buffer, name) =>
+      fromZip(buffer).then((files) => openSource(name || 'test.zip', files)),
     navigate: (path, anchor) => navigate(path, anchor || ''),
     get currentPath() {
       return currentPath;

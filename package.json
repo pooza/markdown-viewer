@@ -1,0 +1,25 @@
+{
+  "name": "markdown-viewer",
+  "version": "1.0.0",
+  "description": "ネットにつながらない環境でも使える、1 枚の HTML の Markdown ビューア（zip・フォルダ・Mermaid 対応）",
+  "private": true,
+  "license": "MIT",
+  "repository": "github:pooza/markdown-viewer",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test \"test/**/*.test.cjs\"",
+    "smoke": "node test/smoke.mjs",
+    "check-zip": "node test/check-zip.mjs",
+    "vendor": "node scripts/fetch-vendor.mjs",
+    "vendor:check": "node scripts/fetch-vendor.mjs --check",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "format": "biome format --write"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.0"
+  }
+}

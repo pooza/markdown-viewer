@@ -18,8 +18,11 @@ const UNSAFE_IN_SCRIPT = /<\/?script/i;
 
 function gitRevision() {
   try {
-    return execFileSync('git', ['describe', '--always', '--dirty'], { cwd: ROOT, encoding: 'utf8' }).trim();
-  } catch (e) {
+    return execFileSync('git', ['describe', '--always', '--dirty'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    }).trim();
+  } catch (_e) {
     return 'unknown';
   }
 }
@@ -29,13 +32,19 @@ async function loadVendor() {
   for (const lib of manifest) {
     const body = await readFile(join(VENDOR, lib.file));
     const hash = createHash('sha256').update(body).digest('hex');
-    if (hash !== lib.sha256) throw new Error(`vendor/${lib.file} が VERSIONS.json と一致しません（${lib.name}@${lib.version}）`);
+    if (hash !== lib.sha256)
+      throw new Error(
+        `vendor/${lib.file} が VERSIONS.json と一致しません（${lib.name}@${lib.version}）`,
+      );
   }
   return manifest;
 }
 
 function assertSafe(text, label) {
-  if (UNSAFE_IN_SCRIPT.test(text)) throw new Error(`${label} に "<script" または "</script" が含まれていて、そのままでは埋め込めません`);
+  if (UNSAFE_IN_SCRIPT.test(text))
+    throw new Error(
+      `${label} に "<script" または "</script" が含まれていて、そのままでは埋め込めません`,
+    );
 }
 
 // 埋め込んだライブラリの中にも "</body>" という文字列があるので、必ず最後のものの前に差し込む
@@ -47,8 +56,10 @@ export function insertBeforeBodyEnd(html, text) {
 
 export async function build() {
   const manifest = await loadVendor();
+  const { version } = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
   const today = new Date().toISOString().slice(0, 10);
-  const buildInfo = `${today} (${gitRevision()}) / ${manifest.map((l) => `${l.name} ${l.version}`).join(', ')}`;
+  const libs = manifest.map((l) => `${l.name} ${l.version}`).join(', ');
+  const buildInfo = `v${version} ${today} (${gitRevision()}) / ${libs}`;
 
   let html = await readFile(join(SRC, 'viewer.html'), 'utf8');
   html = html.replaceAll('{{BUILD}}', buildInfo);
@@ -57,11 +68,17 @@ export async function build() {
   const SCRIPT_TAG = /<script src="([^"]+)"><\/script>/g;
   const bodies = new Map();
   for (const [, src] of html.matchAll(SCRIPT_TAG)) {
-    const body = (await readFile(resolve(SRC, src), 'utf8')).replace(/\n\/\/# sourceMappingURL=\S+\s*$/, '\n');
+    const body = (await readFile(resolve(SRC, src), 'utf8')).replace(
+      /\n\/\/# sourceMappingURL=\S+\s*$/,
+      '\n',
+    );
     assertSafe(body, src);
     bodies.set(src, body);
   }
-  html = html.replace(SCRIPT_TAG, (tag, src) => `<script>\n/* ${src.replace(/^\.\.\//, '')} */\n${bodies.get(src)}\n</script>`);
+  html = html.replace(
+    SCRIPT_TAG,
+    (_tag, src) => `<script>\n/* ${src.replace(/^\.\.\//, '')} */\n${bodies.get(src)}\n</script>`,
+  );
 
   const licenseTexts = [];
   for (const lib of manifest) {
@@ -70,7 +87,10 @@ export async function build() {
   }
   const licenses = licenseTexts.join('\n');
   assertSafe(licenses, 'ライセンス文');
-  html = insertBeforeBodyEnd(html, `    <script type="text/plain" id="third-party-licenses">\n${licenses}</script>\n`);
+  html = insertBeforeBodyEnd(
+    html,
+    `    <script type="text/plain" id="third-party-licenses">\n${licenses}</script>\n`,
+  );
 
   // 外へ取りに行く参照が残っていないこと（オフラインで動くこと）を確かめる
   if (/<script[^>]*\ssrc=/i.test(html)) throw new Error('外部 script の参照が残っています');

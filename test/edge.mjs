@@ -36,14 +36,20 @@ export async function runInEdge(url) {
 
   let cdp;
   try {
-    const version = await retry(async () => (await fetch(`http://127.0.0.1:${port}/json/version`)).json(), 30000);
+    const version = await retry(
+      async () => (await fetch(`http://127.0.0.1:${port}/json/version`)).json(),
+      30000,
+    );
     cdp = await connect(version.webSocketDebuggerUrl);
     const { targetId } = await cdp.send('Target.createTarget', { url });
     const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
     const raw = await retry(async () => {
       const { result } = await cdp.send(
         'Runtime.evaluate',
-        { expression: "(document.getElementById('smoke-result') || {}).textContent", returnByValue: true },
+        {
+          expression: "(document.getElementById('smoke-result') || {}).textContent",
+          returnByValue: true,
+        },
         sessionId,
       );
       if (!result.value || result.value === 'pending') throw new Error('まだ終わっていない');
@@ -57,7 +63,7 @@ export async function runInEdge(url) {
     await sleep(1500);
     try {
       rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
-    } catch (e) {
+    } catch (_e) {
       console.warn(`一時プロファイルを消せませんでした: ${profile}`);
     }
   }
@@ -74,7 +80,7 @@ async function retry(fn, timeoutMs) {
       await sleep(200);
     }
   }
-  throw new Error(`時間切れ: ${lastError && lastError.message}`);
+  throw new Error(`時間切れ: ${lastError?.message}`);
 }
 
 function connect(wsUrl) {
@@ -103,4 +109,3 @@ function connect(wsUrl) {
       });
   });
 }
-

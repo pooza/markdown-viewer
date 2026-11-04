@@ -127,7 +127,8 @@ ${filler}
 [戻る](../README.md)
 `;
 
-const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>';
+const SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>';
 
 // 「日本語.md」「# テスト」の CP932
 const SJIS_NAME = [0x93, 0xfa, 0x96, 0x7b, 0x8c, 0xea, 0x2e, 0x6d, 0x64];
@@ -218,12 +219,20 @@ const PROBE = `
 function check(r) {
   const results = [];
   const eq = (label, actual, expected) =>
-    results.push({ label, ok: JSON.stringify(actual) === JSON.stringify(expected), actual, expected });
+    results.push({
+      label,
+      ok: JSON.stringify(actual) === JSON.stringify(expected),
+      actual,
+      expected,
+    });
   const ok = (label, cond, actual) => results.push({ label, ok: !!cond, actual });
 
   ok('例外なく最後まで動く', !r.error, r.error);
   eq('README を最初に開く', r.first, 'README.md');
-  eq('見出しに GitHub と同じ ID', r.headingIds, ['user-content-テスト文書', 'user-content-01-概要はじめに']);
+  eq('見出しに GitHub と同じ ID', r.headingIds, [
+    'user-content-テスト文書',
+    'user-content-01-概要はじめに',
+  ]);
   ok('CRLF の mermaid が図になる（オフライン）', r.mermaidSvg, r.mermaidSvg);
   eq('相対パスの画像を zip から読む', r.imageSrc, 'blob:');
   ok('無い画像を示す', r.brokenImage, r.brokenImage);
@@ -231,17 +240,35 @@ function check(r) {
   eq('危険な属性・要素が残らない', r.dangerous, 0);
   eq('リンク切れ（無い節・無いファイル）を示す', r.brokenLinks, ['無い節', '壊れ']);
   eq('外部リンクは別タブ', r.externalTarget, '_blank');
-  eq('一覧に Markdown とテキストを出し、.git は出さない', r.tree, ['data/a.txt', 'data/sjis.txt', 'sub/doc.md', 'README.md', '日本語.md']);
+  eq('一覧に Markdown とテキストを出し、.git は出さない', r.tree, [
+    'data/a.txt',
+    'data/sjis.txt',
+    'sub/doc.md',
+    'README.md',
+    '日本語.md',
+  ]);
   eq('横長の表は表の中でスクロール', r.tableDisplay, 'block');
-  eq('別文書の節へのリンクで文書を開く', r.cross && r.cross.path, 'sub/doc.md');
-  ok('…そしてその節までスクロールする', r.cross && r.cross.scrolled && Math.abs(r.cross.targetTop) < 60, r.cross);
+  eq('別文書の節へのリンクで文書を開く', r.cross?.path, 'sub/doc.md');
+  ok(
+    '…そしてその節までスクロールする',
+    r.cross?.scrolled && Math.abs(r.cross.targetTop) < 60,
+    r.cross,
+  );
   eq('ブラウザの「戻る」で前の文書へ', r.back, 'README.md');
-  eq('フォルダへのリンクで中身の一覧', r.listing, ['📁 ..', '📄 a.txt', '📄 b.xlsx', '📄 sjis.txt']);
+  eq('フォルダへのリンクで中身の一覧', r.listing, [
+    '📁 ..',
+    '📄 a.txt',
+    '📄 b.xlsx',
+    '📄 sjis.txt',
+  ]);
   eq('Shift_JIS のテキストを読む', r.sjisText, 'テスト\n');
   eq('…読んだ文字コードを示す', r.sjisPath, 'data/sjis.txt（Shift_JIS）');
-  eq('CP932 のファイル名・本文の zip を読む', r.cp932Name, { h1: 'テスト', notice: '文字コードを Shift_JIS として読みました。' });
+  eq('CP932 のファイル名・本文の zip を読む', r.cp932Name, {
+    h1: 'テスト',
+    notice: '文字コードを Shift_JIS として読みました。',
+  });
   eq('表示できないファイルは保存させる', r.download, 'b.xlsx');
-  ok('ライセンスを表示できる', r.about && r.about.licenses, r.about);
+  ok('ライセンスを表示できる', r.about?.licenses, r.about);
   return results;
 }
 
@@ -259,7 +286,9 @@ console.log(buildInfo);
 let failed = 0;
 for (const r of check(result)) {
   if (!r.ok) failed += 1;
-  console.log(`${r.ok ? '✔' : '✖'} ${r.label}${r.ok ? '' : `\n    actual:   ${JSON.stringify(r.actual)}${'expected' in r ? `\n    expected: ${JSON.stringify(r.expected)}` : ''}`}`);
+  console.log(
+    `${r.ok ? '✔' : '✖'} ${r.label}${r.ok ? '' : `\n    actual:   ${JSON.stringify(r.actual)}${'expected' in r ? `\n    expected: ${JSON.stringify(r.expected)}` : ''}`}`,
+  );
 }
 if (failed > 0) {
   console.log(`\n${failed} 件失敗`);

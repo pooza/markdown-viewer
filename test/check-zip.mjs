@@ -52,7 +52,13 @@ await build();
 const zip = await readFile(zipPath);
 const html = await readFile(OUTPUT, 'utf8');
 const page = join(OUTPUT, '..', 'check.html');
-await writeFile(page, insertBeforeBodyEnd(html, `<script>window.__FIXTURE__ = '${zip.toString('base64')}';</script>\n${PROBE}\n`));
+await writeFile(
+  page,
+  insertBeforeBodyEnd(
+    html,
+    `<script>window.__FIXTURE__ = '${zip.toString('base64')}';</script>\n${PROBE}\n`,
+  ),
+);
 
 const result = await runInEdge(pathToFileURL(page).href);
 if (result.error) {

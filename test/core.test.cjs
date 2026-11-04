@@ -11,7 +11,9 @@ test('decodeBytes: UTF-8・BOM・Shift_JIS を読み分ける', () => {
   assert.deepEqual(C.decodeBytes(bom), { text: '日本語テスト', encoding: 'utf-8' });
 
   // 「日本語テスト」の CP932
-  const sjis = Uint8Array.from([0x93, 0xfa, 0x96, 0x7b, 0x8c, 0xea, 0x83, 0x65, 0x83, 0x58, 0x83, 0x67]);
+  const sjis = Uint8Array.from([
+    0x93, 0xfa, 0x96, 0x7b, 0x8c, 0xea, 0x83, 0x65, 0x83, 0x58, 0x83, 0x67,
+  ]);
   assert.deepEqual(C.decodeBytes(sjis), { text: '日本語テスト', encoding: 'shift_jis' });
 
   // JSZip からは配列で来ることもある
@@ -36,7 +38,8 @@ test('splitHref: 節とクエリと %エンコード', () => {
 });
 
 test('isExternal', () => {
-  for (const h of ['https://example.com', 'http://x', 'mailto:a@b', 'file:///c:/x', '//host/x']) assert.ok(C.isExternal(h), h);
+  for (const h of ['https://example.com', 'http://x', 'mailto:a@b', 'file:///c:/x', '//host/x'])
+    assert.ok(C.isExternal(h), h);
   for (const h of ['a.md', './a.md', '../x/y.md', '#a', 'c/d:e.md']) assert.ok(!C.isExternal(h), h);
 });
 
@@ -82,8 +85,14 @@ test('slugify: GitHub と同じ ID になる', () => {
   // 日本語の見出し。全角記号（｜）・中黒（・）・アポストロフィは消え、空白はハイフンになる
   assert.equal(C.slugify('01 概要｜はじめに'), '01-概要はじめに');
   assert.equal(C.slugify('04 設定｜画面 第1・2章'), '04-設定画面-第12章');
-  assert.equal(C.slugify("12 使い方｜アプリで Let's 開始 第2版"), '12-使い方アプリで-lets-開始-第2版');
-  assert.equal(C.slugify('08 文字コード・改行コード｜Windows 環境 補足'), '08-文字コード改行コードwindows-環境-補足');
+  assert.equal(
+    C.slugify("12 使い方｜アプリで Let's 開始 第2版"),
+    '12-使い方アプリで-lets-開始-第2版',
+  );
+  assert.equal(
+    C.slugify('08 文字コード・改行コード｜Windows 環境 補足'),
+    '08-文字コード改行コードwindows-環境-補足',
+  );
   // 英語の見出し
   assert.equal(C.slugify('Hello, World!'), 'hello-world');
   assert.equal(C.slugify('foo_bar-baz'), 'foo_bar-baz');

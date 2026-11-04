@@ -35,32 +35,67 @@ vendor/             同梱ライブラリ。版とハッシュは VERSIONS.json�
 scripts/build.mjs   src と vendor を 1 枚にまとめて dist/markdown-viewer.html を作る
 scripts/fetch-vendor.mjs  ライブラリの取得（版を上げるときだけ。ネットが要る）
 test/               テスト
+package.json        版と npm run のコマンド
+biome.json          整形と Lint の設定
 ```
 
 `dist/` はビルドで作るのでリポジトリには入れていない。
 
 ## 作り直す・確かめる
 
-Node.js 18 以上が要る。ビルドとテストはネットを使わない。
+Node.js 18 以上が要る。ビルドとテストはネットを使わない（`npm install` だけは Biome の取得にネットが要る）。
 
 ```sh
-node scripts/build.mjs              # dist/markdown-viewer.html を作る
-node --test test/core.test.cjs      # core.js の単体テスト
-node test/smoke.mjs                 # ビルド版をネット遮断のヘッドレス Edge で開いて確かめる
-node test/check-zip.mjs docs.zip    # 手元の zip を開き、リンク切れ・画像切れ・図の失敗を数える
+npm install                     # 開発用の道具（Biome）を入れる。ビルドとテストだけなら不要
+npm run build                   # dist/markdown-viewer.html を作る
+npm test                        # core.js の単体テスト
+npm run smoke                   # ビルド版をネット遮断のヘッドレス Edge で開いて確かめる
+npm run check-zip -- docs.zip   # 手元の zip を開き、リンク切れ・画像切れ・図の失敗を数える
+npm run lint                    # Biome で整形と Lint を確かめる（lint:fix で直す）
 ```
 
-`smoke.mjs` は、CP932 のファイル名・CRLF・XSS を仕込んだ zip を作って読み込ませ、21 項目を確かめる。
+`smoke` は、CP932 のファイル名・CRLF・XSS を仕込んだ zip を作って読み込ませ、21 項目を確かめる。
 ドラッグ＆ドロップとフォルダ選択は自動では確かめていない（人が操作して確かめる）。
+
+整形と Lint は [Biome](https://biomejs.dev/)。設定は `biome.json`（2 スペース、1 行 100 桁、シングルクォート、末尾カンマあり）。
+`src/` はモジュールではない普通の script なので `'use strict'` を残す（`noRedundantUseStrict` を切っている）。
+
+## ブランチとリリース
+
+- 作業は `develop`。リリースのときに `main` へマージする
+- 版は `package.json` の `version`。ビルド版の「このビューアについて」に版・ビルド日・コミットが出る
+- 配布物はビルド版 1 枚だけ。GitHub の Releases に添付する（`dist/` はリポジトリに入れない）
+
+手順（例: 1.1.0 を出す）:
+
+```sh
+# 1. develop で版を上げ、確かめる
+npm version 1.1.0 --no-git-tag-version
+npm run lint && npm test && npm run smoke
+git commit -am "release: v1.1.0"
+
+# 2. main へマージしてタグを打つ
+git checkout main
+git merge --ff-only develop
+git tag -a v1.1.0 -m "v1.1.0"
+git push origin main develop v1.1.0
+
+# 3. タグの状態でビルドし、Releases に添付する
+npm run build
+gh release create v1.1.0 dist/markdown-viewer.html --title "v1.1.0" --notes "変更点をここに書く"
+git checkout develop
+```
+
+ビルドはタグを打った後に行う（「このビューアについて」のコミット表示が `-dirty` や古いコミットにならないように）。
+添付したファイルは `https://github.com/pooza/markdown-viewer/releases/latest/download/markdown-viewer.html` で常に最新版を取れる。
 
 ## ライブラリの版を上げる
 
 1. `scripts/fetch-vendor.mjs` の `LIBS` の版と URL を書き換える
-2. `node scripts/fetch-vendor.mjs` で取得する（`vendor/VERSIONS.json` が書き直される）
-3. `node test/smoke.mjs` で確かめる
+2. `npm run vendor` で取得する（`vendor/VERSIONS.json` が書き直される。ネットが要る）
+3. `npm run smoke` で確かめる
 
-ビルドは `vendor/` のハッシュが `VERSIONS.json` と一致しないと止まる。
-
+ビルドは `vendor/` のハッシュが `VERSIONS.json` と一致しないと止まる（`npm run vendor:check` でも確かめられる）。
 | ライブラリ | 版 | 用途 | ライセンス |
 | --- | --- | --- | --- |
 | JSZip | 3.10.1 | zip の読み込み | MIT または GPLv3 |
