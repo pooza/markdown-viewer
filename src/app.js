@@ -97,8 +97,19 @@
     return e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
   }
 
+  // メールの添付・Explorer で開いた zip の中・オンデマンドのクラウドのファイルなど、実体がまだ
+  // ディスクに無いものは entry.file() が EncodingError（A URI supplied to the API was malformed…）で
+  // 失敗する。DataTransfer の File は読めるので、zip 1 つはそれを使い、それ以外も失敗したらそれに替える。
   async function openDropped(entries, plainFiles) {
     const valid = entries.filter(Boolean);
+    // 「〜.zip」という名前のフォルダは除く（entry があればファイルであることを確かめる）
+    const isZipFile =
+      plainFiles.length === 1 &&
+      /\.zip$/i.test(plainFiles[0].name) &&
+      (valid.length === 0 || (valid.length === 1 && valid[0].isFile));
+    if (isZipFile) {
+      return openZipFile(plainFiles[0]);
+    }
     if (valid.length === 0) {
       // webkitGetAsEntry が使えない環境。ファイルだけ受け取る
       if (plainFiles.length === 1 && /\.zip$/i.test(plainFiles[0].name))
@@ -108,11 +119,8 @@
         fromFiles(plainFiles.map((f) => ({ path: f.name, file: f }))),
       );
     }
-    if (valid.length === 1 && valid[0].isFile && /\.zip$/i.test(valid[0].name)) {
-      return openZipFile(await entryFile(valid[0]));
-    }
     const collected = [];
-    for (const entry of valid) await collectEntry(entry, collected);
+    for (const entry of valid) await collectEntry(entry, collected, plainFiles);
     const name = valid.length === 1 ? valid[0].name : 'ドロップしたファイル';
     return openSource(name, fromFiles(collected));
   }
@@ -138,13 +146,24 @@
     });
   }
 
-  async function collectEntry(entry, out) {
+  // plainFiles はドロップした一番上のファイル。entry.file() が失敗したら同じ名前のものに替える
+  async function collectEntry(entry, out, plainFiles = []) {
     const path = C.normalizePath(entry.fullPath || entry.name);
     if (C.isIgnored(entry.isDirectory ? `${path}/x` : path)) return;
     if (entry.isFile) {
-      out.push({ path, file: await entryFile(entry) });
+      out.push({ path, file: await entryFileOr(entry, plainFiles) });
     } else if (entry.isDirectory) {
       for (const child of await readAllEntries(entry)) await collectEntry(child, out);
+    }
+  }
+
+  async function entryFileOr(entry, plainFiles) {
+    try {
+      return await entryFile(entry);
+    } catch (error) {
+      const plain = plainFiles.find((f) => f.name === entry.name);
+      if (plain) return plain;
+      throw error;
     }
   }
 
