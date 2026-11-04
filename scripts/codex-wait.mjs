@@ -64,6 +64,9 @@ export function snapshot() {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// 同じコミットでレビューを起こし直すと、前回の completed が残ったまま新しい巡が始まる。
+// completed は、待っている間に一度でも completed 以外（running など）を見てからでないと終わりとみなさない。
+let sawNotCompleted = false;
 for (let i = 0; i < 90; i++) {
   let s;
   try {
@@ -73,12 +76,13 @@ for (let i = 0; i < 90; i++) {
     process.exit(2);
   }
   console.log(`${new Date().toTimeString().slice(0, 8)} ${JSON.stringify(s)}`);
+  if (s.state !== 'completed') sawNotCompleted = true;
   if (
     s.reviews > base.reviews ||
     s.inline > base.inline ||
     s.issue > base.issue ||
     (s.plusOne && s.plusOne > base.plusOne) ||
-    s.state === 'completed'
+    (s.state === 'completed' && sawNotCompleted)
   ) {
     console.log('DONE');
     process.exit(0);
