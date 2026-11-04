@@ -122,8 +122,9 @@
     if (isZipFile) {
       return openZipFile(plainFiles[0]);
     }
-    const handles = (await Promise.all(handlePromises)).filter(Boolean);
-    if (handles.length > 0) {
+    // 一部だけ取れたときに残りを黙って落とさないよう、全部の項目で取れたときだけ使う
+    const handles = await Promise.all(handlePromises);
+    if (handles.length > 0 && handles.every(Boolean)) {
       const collected = [];
       for (const handle of handles) await collectHandle(handle, '', collected);
       const name = handles.length === 1 ? handles[0].name : 'ドロップしたファイル';
