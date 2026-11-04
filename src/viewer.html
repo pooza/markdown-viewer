@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Viewer</title>
+    <!--
+      Markdown Viewer {{BUILD}}
+      ネットにつながらない環境で使えるよう、ライブラリはすべてこのファイルに埋め込んである（ビルド版）。
+      ソースは src/viewer.html。ここを直接書き換えず、scripts/build.mjs で作り直すこと。
+    -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Meiryo', Helvetica, Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            color: #1f2328;
+            background: #ffffff;
+        }
+
+        #sidebar {
+            width: 280px;
+            background: #f6f8fa;
+            border-right: 1px solid #d0d7de;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #file-input-container {
+            padding: 16px;
+            border-bottom: 1px solid #d0d7de;
+        }
+
+        .open-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .open-button {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: #ffffff;
+            font-size: 13px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .open-button:hover {
+            background: #eef1f4;
+        }
+
+        .open-button:disabled {
+            cursor: not-allowed;
+            color: #8c959f;
+        }
+
+        .hidden-input {
+            display: none;
+        }
+
+        #source-name {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #57606a;
+            word-break: break-all;
+        }
+
+        #search-box {
+            width: 100%;
+            margin-top: 8px;
+            padding: 8px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        #file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        #sidebar-footer {
+            padding: 8px 16px;
+            border-top: 1px solid #d0d7de;
+            font-size: 12px;
+        }
+
+        #sidebar-footer a {
+            color: #57606a;
+        }
+
+        .folder {
+            margin-bottom: 4px;
+        }
+
+        .folder-header {
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            user-select: none;
+            word-break: break-all;
+        }
+
+        .folder-header:hover {
+            background: #e1e4e8;
+        }
+
+        .folder-icon {
+            margin-right: 6px;
+            font-size: 12px;
+            width: 16px;
+            flex-shrink: 0;
+            display: inline-block;
+        }
+
+        .folder-content {
+            margin-left: 16px;
+            display: none;
+        }
+
+        .folder-content.open {
+            display: block;
+        }
+
+        .file-item {
+            padding: 6px 8px 6px 24px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-bottom: 2px;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .file-item:hover {
+            background: #e1e4e8;
+        }
+
+        .file-item.text {
+            color: #57606a;
+        }
+
+        .file-item.active {
+            background: #0969da;
+            color: white;
+        }
+
+        .file-item.readme {
+            font-weight: bold;
+        }
+
+        #content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+        }
+
+        #markdown-content {
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        /* Markdown スタイル */
+        #markdown-content h1 {
+            font-size: 2em;
+            border-bottom: 1px solid #d0d7de;
+            padding-bottom: 0.3em;
+            margin-bottom: 16px;
+            margin-top: 24px;
+        }
+
+        #markdown-content h2 {
+            font-size: 1.5em;
+            border-bottom: 1px solid #d0d7de;
+            padding-bottom: 0.3em;
+            margin-bottom: 16px;
+            margin-top: 24px;
+        }
+
+        #markdown-content h3 {
+            font-size: 1.25em;
+            margin-bottom: 16px;
+            margin-top: 24px;
+        }
+
+        #markdown-content h4, #markdown-content h5, #markdown-content h6 {
+            margin-bottom: 16px;
+            margin-top: 24px;
+        }
+
+        #markdown-content p {
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        #markdown-content ul, #markdown-content ol {
+            margin-bottom: 16px;
+            padding-left: 2em;
+        }
+
+        #markdown-content li {
+            margin-bottom: 4px;
+        }
+
+        #markdown-content li > ul, #markdown-content li > ol {
+            margin-bottom: 0;
+            margin-top: 4px;
+        }
+
+        #markdown-content code {
+            background: #f6f8fa;
+            padding: 0.2em 0.4em;
+            border-radius: 6px;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 85%;
+        }
+
+        #markdown-content pre {
+            background: #f6f8fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        #markdown-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        #markdown-content pre.plain-text {
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        #markdown-content blockquote {
+            border-left: 4px solid #d0d7de;
+            padding-left: 16px;
+            margin-bottom: 16px;
+            color: #57606a;
+        }
+
+        /* 横に長い表は表の中だけで横スクロールさせる */
+        #markdown-content table {
+            border-collapse: collapse;
+            display: block;
+            width: max-content;
+            max-width: 100%;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        #markdown-content table th,
+        #markdown-content table td {
+            border: 1px solid #d0d7de;
+            padding: 8px 13px;
+        }
+
+        #markdown-content table th {
+            background: #f6f8fa;
+            font-weight: bold;
+        }
+
+        #markdown-content img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        #markdown-content img.broken-image {
+            border: 1px dashed #d1242f;
+            padding: 4px;
+        }
+
+        #markdown-content a {
+            color: #0969da;
+            text-decoration: none;
+        }
+
+        #markdown-content a:hover {
+            text-decoration: underline;
+        }
+
+        #markdown-content a.broken-link {
+            color: #d1242f;
+            cursor: help;
+            border-bottom: 1px dotted #d1242f;
+        }
+
+        #markdown-content .mermaid {
+            margin-bottom: 16px;
+        }
+
+        #markdown-content .listing li {
+            list-style: none;
+        }
+
+        .doc-path {
+            font-size: 12px;
+            color: #57606a;
+            margin-bottom: 12px;
+            word-break: break-all;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 40px;
+            color: #57606a;
+            line-height: 1.8;
+        }
+
+        .error {
+            color: #d1242f;
+            padding: 16px;
+            background: #fff1f0;
+            border-radius: 6px;
+            margin: 16px;
+            line-height: 1.6;
+        }
+
+        .warn-banner {
+            color: #9a6700;
+            background: #fff8c5;
+            border: 1px solid #d4a72c;
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        #drop-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(9, 105, 218, 0.12);
+            border: 3px dashed #0969da;
+            z-index: 10;
+            pointer-events: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #0969da;
+        }
+
+        body.dragging #drop-overlay {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div id="file-input-container">
+            <div class="open-buttons">
+                <button type="button" class="open-button" id="open-zip">zip を開く</button>
+                <button type="button" class="open-button" id="open-folder">フォルダを開く</button>
+            </div>
+            <input type="file" id="zip-input" class="hidden-input" accept=".zip" />
+            <input type="file" id="folder-input" class="hidden-input" webkitdirectory multiple />
+            <div id="source-name"></div>
+            <input type="text" id="search-box" placeholder="ファイル名で絞り込み" />
+        </div>
+        <div id="file-list"></div>
+        <div id="sidebar-footer"><a href="#" id="about-link">このビューアについて</a></div>
+    </div>
+    <div id="content">
+        <div id="markdown-content">
+            <div id="loading">zip ファイルかフォルダを選ぶか、<br>この画面にドラッグ＆ドロップしてください</div>
+        </div>
+    </div>
+    <div id="drop-overlay">ここにドロップ</div>
+
+    <script type="text/plain" id="build-info">{{BUILD}}</script>
+    <script src="../vendor/jszip.min.js"></script>
+    <script src="../vendor/marked.umd.js"></script>
+    <script src="../vendor/purify.min.js"></script>
+    <script src="../vendor/mermaid.min.js"></script>
+    <script src="core.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
