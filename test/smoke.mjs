@@ -86,6 +86,8 @@ const WIDE = [
   ...Array.from({ length: 9 }, (_, i) => `  HUB ||--o{ CHILD_${i + 1} : "HUB_ID = HUB_ID"`),
 ].join('\n');
 
+const LONG = '長い説明の文。'.repeat(60);
+
 const README = crlf(`# テスト文書
 
 ## 01 概要｜はじめに
@@ -120,6 +122,17 @@ ${WIDE}
 | a | b |
 | --- | --- |
 | 1 | 2 |
+
+| # | 項目名 | 説明 |
+| ---: | --- | --- |
+| 1 | 記録年月 | ${LONG} |
+| 2 | 加入者番号 | 短い |
+
+- リストの中の表
+
+  | 項目名 | 説明 |
+  | --- | --- |
+  | 入れ子 | ${LONG} |
 `);
 
 const DOC = `# Doc
@@ -216,6 +229,36 @@ const PROBE = `
     out.externalTarget = link('外部').target;
     out.tree = [...document.querySelectorAll('.file-item')].map((d) => d.title);
     out.tableDisplay = getComputedStyle(c.querySelector('table')).display;
+    {
+      const t = [...c.querySelectorAll('table')].find((x) => x.rows[0].cells[1]?.textContent === '項目名');
+      const cls = (i) => [...t.rows].every((r) => r.cells[i].classList.contains('nowrap'));
+      out.nowrap = { short: cls(0) && cls(1), long: [...t.rows].some((r) => r.cells[2].classList.contains('nowrap')) };
+      // 窓が広いとき: 表は本文（980px）より広がり、本文の中央に揃う
+      scroller.style.flex = 'none';
+      scroller.style.width = '2000px';
+      window.dispatchEvent(new Event('resize'));
+      const tr = t.getBoundingClientRect();
+      const cr = c.getBoundingClientRect();
+      const nested = c.querySelector('li table').getBoundingClientRect();
+      // 画像の読み込みなどで表が後から広がっても、揃え直される
+      // 本文より狭い表（a | b）に、本文より広いものを後から足す
+      const small = c.querySelector(':scope > table');
+      const grow = document.createElement('span');
+      grow.style.cssText = 'display:inline-block;width:1400px';
+      small.rows[1].cells[0].appendChild(grow);
+      await wait(200);
+      const gr = small.getBoundingClientRect();
+      out.regrown = gr.width > cr.width && Math.abs(gr.left + gr.right - cr.left - cr.right) < 2;
+      grow.remove();
+      out.wideTable = {
+        wider: tr.width > cr.width + 1,
+        centered: Math.abs(tr.left + tr.right - cr.left - cr.right) < 2,
+        nestedInside: nested.right <= cr.right + 1,
+      };
+      scroller.style.flex = '';
+      scroller.style.width = '';
+      window.dispatchEvent(new Event('resize'));
+    }
 
     link('別文書の節').click();
     await until(() => c.dataset.path === 'sub/doc.md');
@@ -288,6 +331,13 @@ function check(r) {
     '日本語.md',
   ]);
   eq('横長の表は表の中でスクロール', r.tableDisplay, 'block');
+  eq('短い列は折り返さず、長い列は折り返す', r.nowrap, { short: true, long: false });
+  ok('…表が後から広がっても揃え直す', r.regrown, r.regrown);
+  eq('窓が広ければ表は本文より広がり、中央に揃う', r.wideTable, {
+    wider: true,
+    centered: true,
+    nestedInside: true,
+  });
   eq('別文書の節へのリンクで文書を開く', r.cross?.path, 'sub/doc.md');
   ok(
     '…そしてその節までスクロールする',

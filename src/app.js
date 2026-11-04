@@ -255,6 +255,7 @@
     contentEl.replaceChildren(...view.childNodes);
     contentEl.dataset.path = path;
     document.title = `${C.baseName(path) || source.name} - Markdown Viewer`;
+    watchTables();
     if (afterAttach) await afterAttach();
     scrollToAnchor(anchor);
   }
@@ -316,6 +317,14 @@
       h.id = `user-content-${slugger.slug(h.textContent)}`;
     }
 
+    // 短い列は折り返さない。長い列（説明など）があると、日本語の短い列は 1〜2 字の幅まで縮んで縦書きになる
+    for (const table of view.querySelectorAll('table')) {
+      const rows = [...table.rows].map((r) => [...r.cells].map((c) => c.textContent.trim()));
+      for (const i of C.shortColumns(rows, NOWRAP_WIDTH)) {
+        for (const r of table.rows) r.cells[i]?.classList.add('nowrap');
+      }
+    }
+
     // ```mermaid を図にする（marked が language-mermaid の code にしたものを置き換える）
     const mermaidNodes = [];
     for (const code of view.querySelectorAll('pre > code.language-mermaid')) {
@@ -342,6 +351,33 @@
       }
       decorateDiagrams(mermaidNodes);
     };
+  }
+
+  // ---- 表の幅 -------------------------------------------------------------
+  // 文章は読みやすい幅（980px）のままにし、本文の直下の表だけは窓の幅まで広げる（CSS の max-width: 100cqw）。
+  // リストや引用の中の表は字下げの分だけ右にずれているので広げない（親の幅のまま）。
+  // 本文より広くなった表は、はみ出した分の半分だけ左へずらして本文の中央に揃える。
+
+  const NOWRAP_WIDTH = 30; // 半角 30 字（全角 15 字）以下のセルだけの列は折り返さない
+
+  function centerWideTables() {
+    for (const table of contentEl.querySelectorAll(':scope > table')) {
+      table.style.marginLeft = '';
+      const extra = table.offsetWidth - contentEl.clientWidth;
+      if (extra > 0) table.style.marginLeft = `${-extra / 2}px`;
+    }
+  }
+  window.addEventListener('resize', centerWideTables);
+
+  // 表の中の画像が後から読み込まれると、表の幅が変わる。表の大きさが変わったら揃え直す
+  const tableObserver =
+    typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(centerWideTables);
+
+  function watchTables() {
+    centerWideTables();
+    if (!tableObserver) return;
+    tableObserver.disconnect();
+    for (const table of contentEl.querySelectorAll(':scope > table')) tableObserver.observe(table);
   }
 
   // ---- 図の拡大表示 -------------------------------------------------------
