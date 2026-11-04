@@ -102,7 +102,12 @@
   // 失敗する。DataTransfer の File は読めるので、zip 1 つはそれを使い、それ以外も失敗したらそれに替える。
   async function openDropped(entries, plainFiles) {
     const valid = entries.filter(Boolean);
-    if (plainFiles.length === 1 && /\.zip$/i.test(plainFiles[0].name) && valid.length <= 1) {
+    // 「〜.zip」という名前のフォルダは除く（entry があればファイルであることを確かめる）
+    const isZipFile =
+      plainFiles.length === 1 &&
+      /\.zip$/i.test(plainFiles[0].name) &&
+      (valid.length === 0 || (valid.length === 1 && valid[0].isFile));
+    if (isZipFile) {
       return openZipFile(plainFiles[0]);
     }
     if (valid.length === 0) {
