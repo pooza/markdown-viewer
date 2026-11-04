@@ -166,6 +166,8 @@
             flex: 1;
             overflow-y: auto;
             padding: 40px;
+            /* 表の max-width（100cqw）の基準にする */
+            container-type: inline-size;
         }
 
         #markdown-content {
@@ -256,7 +258,9 @@
             color: #57606a;
         }
 
-        /* 横に長い表は表の中だけで横スクロールさせる */
+        /* 横に長い表は表の中だけで横スクロールさせる。
+           本文の直下の表は、本文の幅を超えて窓の幅（#content の中）まで広がってよい（中央揃えは app.js）。
+           100cqw を解釈できない古いブラウザでは 100%（本文の幅）のまま */
         #markdown-content table {
             border-collapse: collapse;
             display: block;
@@ -264,12 +268,23 @@
             max-width: 100%;
             overflow-x: auto;
             margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        /* 本文の直下の表だけ。リストや引用の中の表は字下げの分ずれるので、親の幅のまま */
+        #markdown-content > table {
+            max-width: 100cqw;
         }
 
         #markdown-content table th,
         #markdown-content table td {
             border: 1px solid #d0d7de;
-            padding: 8px 13px;
+            padding: 6px 12px;
+        }
+
+        /* どのセルも短い列（app.js が付ける） */
+        #markdown-content table .nowrap {
+            white-space: nowrap;
         }
 
         #markdown-content table th {
