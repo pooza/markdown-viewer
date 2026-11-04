@@ -360,6 +360,84 @@
         body.dragging #drop-overlay {
             display: flex;
         }
+
+        /* 図の拡大表示。縮んで表示されている図にだけ「拡大」を出す */
+        #markdown-content .diagram {
+            position: relative;
+        }
+
+        #markdown-content .diagram.shrunk {
+            cursor: zoom-in;
+        }
+
+        .diagram-zoom-button {
+            display: none;
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            padding: 4px 10px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .diagram.shrunk .diagram-zoom-button {
+            display: block;
+        }
+
+        #diagram-zoom {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            outline: none;
+        }
+
+        #diagram-zoom[hidden] {
+            display: none;
+        }
+
+        .diagram-zoom-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-bottom: 1px solid #d0d7de;
+            background: #f6f8fa;
+            font-size: 13px;
+        }
+
+        .diagram-zoom-toolbar button {
+            min-width: 36px;
+            padding: 4px 10px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: #ffffff;
+            cursor: pointer;
+        }
+
+        .diagram-zoom-hint {
+            color: #57606a;
+            margin-left: 8px;
+        }
+
+        .diagram-zoom-close {
+            margin-left: auto;
+        }
+
+        #diagram-zoom-stage {
+            flex: 1;
+            overflow: auto;
+            padding: 16px;
+        }
+
+        #diagram-zoom-stage svg {
+            max-width: none;
+        }
     </style>
 </head>
 <body>
@@ -383,6 +461,17 @@
         </div>
     </div>
     <div id="drop-overlay">ここにドロップ</div>
+    <div id="diagram-zoom" hidden tabindex="-1" role="dialog" aria-label="図の拡大表示">
+        <div class="diagram-zoom-toolbar">
+            <button type="button" data-zoom="out" title="縮小（-）">−</button>
+            <button type="button" data-zoom="reset" id="diagram-zoom-level" title="原寸に戻す（0）">100%</button>
+            <button type="button" data-zoom="in" title="拡大（+）">＋</button>
+            <button type="button" data-zoom="fit" title="画面に収める">全体</button>
+            <span class="diagram-zoom-hint">Ctrl＋ホイールで拡大・縮小、Esc で閉じる</span>
+            <button type="button" data-zoom="close" class="diagram-zoom-close">閉じる</button>
+        </div>
+        <div id="diagram-zoom-stage"></div>
+    </div>
 
     <script type="text/plain" id="build-info">{{BUILD}}</script>
     <script src="../vendor/jszip.min.js"></script>

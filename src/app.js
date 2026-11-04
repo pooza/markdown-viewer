@@ -233,6 +233,7 @@
       return;
     }
     const seq = ++renderSeq;
+    closeZoom();
     const isFile = source.files.has(path);
     currentPath = path;
     displayFileList();
@@ -339,8 +340,127 @@
       } catch (error) {
         console.error('Mermaid の描画に失敗しました', error);
       }
+      decorateDiagrams(mermaidNodes);
     };
   }
+
+  // ---- 図の拡大表示 -------------------------------------------------------
+  // Mermaid の SVG は本文の幅に縮められる（max-width: 100%）。横に広い図は字が読めなくなるので、
+  // 縮んで表示されている図に「拡大」を付け、押すと原寸で全画面に開く。
+
+  const zoomEl = $('diagram-zoom');
+  const zoomStage = $('diagram-zoom-stage');
+  let zoomSvg = null;
+  let zoomBase = null;
+  let zoomScale = 1;
+
+  // 原寸の大きさ。Mermaid の SVG は viewBox に描いた大きさを持っている
+  function naturalSize(svg) {
+    const vb = svg.viewBox?.baseVal;
+    if (vb?.width) return { width: vb.width, height: vb.height };
+    const r = svg.getBoundingClientRect();
+    return { width: r.width, height: r.height };
+  }
+
+  function isShrunk(svg) {
+    return naturalSize(svg).width > svg.getBoundingClientRect().width + 1;
+  }
+
+  function decorateDiagrams(nodes) {
+    for (const node of nodes) {
+      const svg = node.querySelector('svg');
+      if (!svg) continue;
+      node.classList.add('diagram');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'diagram-zoom-button';
+      button.textContent = '拡大';
+      button.title = '原寸で開く';
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openZoom(svg);
+      });
+      node.appendChild(button);
+      node.addEventListener('click', () => {
+        if (node.classList.contains('shrunk')) openZoom(svg);
+      });
+    }
+    updateShrunk();
+  }
+
+  // 窓の幅が変わると、縮んでいるかどうかも変わる
+  function updateShrunk() {
+    for (const node of contentEl.querySelectorAll('.diagram')) {
+      const svg = node.querySelector('svg');
+      node.classList.toggle('shrunk', !!svg && isShrunk(svg));
+    }
+  }
+  window.addEventListener('resize', updateShrunk);
+
+  function openZoom(svg) {
+    zoomBase = naturalSize(svg);
+    zoomSvg = svg.cloneNode(true);
+    zoomSvg.removeAttribute('style'); // Mermaid が付けた max-width を外す
+    zoomStage.replaceChildren(zoomSvg);
+    zoomEl.hidden = false;
+    setZoom(1);
+    zoomStage.scrollTo(0, 0);
+    zoomEl.focus();
+  }
+
+  // 画面に収まる倍率（原寸より大きくはしない）
+  function fitScale() {
+    const width = zoomStage.clientWidth - 32;
+    const height = zoomStage.clientHeight - 32;
+    return Math.min(width / zoomBase.width, height / zoomBase.height, 1);
+  }
+
+  // 下限は 10%。ただし画面の 10 倍より大きい図は、収まる倍率まで縮められるようにする
+  function setZoom(scale) {
+    if (!zoomSvg) return;
+    zoomScale = Math.min(4, Math.max(Math.min(0.1, fitScale()), scale));
+    zoomSvg.setAttribute('width', String(zoomBase.width * zoomScale));
+    zoomSvg.setAttribute('height', String(zoomBase.height * zoomScale));
+    $('diagram-zoom-level').textContent = `${Math.round(zoomScale * 100)}%`;
+  }
+
+  function fitZoom() {
+    setZoom(fitScale());
+  }
+
+  function closeZoom() {
+    if (zoomEl.hidden) return;
+    zoomEl.hidden = true;
+    zoomStage.replaceChildren();
+    zoomSvg = null;
+  }
+
+  zoomEl.addEventListener('click', (e) => {
+    const action = e.target.closest('[data-zoom]')?.dataset.zoom;
+    if (action === 'in') setZoom(zoomScale * 1.25);
+    else if (action === 'out') setZoom(zoomScale / 1.25);
+    else if (action === 'reset') setZoom(1);
+    else if (action === 'fit') fitZoom();
+    else if (action === 'close') closeZoom();
+  });
+
+  zoomEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeZoom();
+    else if (e.key === '+' || e.key === ';') setZoom(zoomScale * 1.25);
+    else if (e.key === '-') setZoom(zoomScale / 1.25);
+    else if (e.key === '0') setZoom(1);
+  });
+
+  // Ctrl＋ホイールで拡大・縮小（ブラウザ全体の拡大は止める）
+  zoomStage.addEventListener(
+    'wheel',
+    (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom(zoomScale * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+    },
+    { passive: false },
+  );
 
   function rewriteLinks(view, dir) {
     for (const a of view.querySelectorAll('a[href]')) {
