@@ -80,6 +80,12 @@ function makeZip(entries) {
 const crlf = (s) => s.replace(/\n/g, '\r\n');
 const filler = Array.from({ length: 80 }, (_, i) => `段落 ${i + 1}`).join('\n\n');
 
+// 1 つを中心に 9 本が放射状に出る ER 図。既定の配置では子が 1 段に並び、本文の幅より横に広がる
+const WIDE = [
+  'erDiagram',
+  ...Array.from({ length: 9 }, (_, i) => `  HUB ||--o{ CHILD_${i + 1} : "HUB_ID = HUB_ID"`),
+].join('\n');
+
 const README = crlf(`# テスト文書
 
 ## 01 概要｜はじめに
@@ -100,6 +106,10 @@ const README = crlf(`# テスト文書
 \`\`\`mermaid
 flowchart LR
   A[開始] --> B[終了]
+\`\`\`
+
+\`\`\`mermaid
+${WIDE}
 \`\`\`
 
 <img src="x" onerror="window.__xss=1">
@@ -172,6 +182,25 @@ const PROBE = `
     out.first = MdvApp.currentPath;
     out.headingIds = [...c.querySelectorAll('h1, h2')].map((h) => h.id);
     out.mermaidSvg = !!(await until(() => c.querySelector('.mermaid svg')));
+    await until(() => c.querySelectorAll('.diagram').length === 2);
+    const diagrams = [...c.querySelectorAll('.diagram')];
+    out.shrunk = diagrams.map((d) => d.classList.contains('shrunk'));
+    const wide = diagrams.find((d) => d.classList.contains('shrunk'));
+    if (wide) {
+      const zoom = document.getElementById('diagram-zoom');
+      wide.querySelector('.diagram-zoom-button').click();
+      const zsvg = document.querySelector('#diagram-zoom-stage svg');
+      const natural = wide.querySelector('svg').viewBox.baseVal.width;
+      out.zoom = {
+        open: !zoom.hidden,
+        natural: Math.round(zsvg.getBoundingClientRect().width) === Math.round(natural),
+        level: document.getElementById('diagram-zoom-level').textContent,
+      };
+      zoom.querySelector('[data-zoom="fit"]').click();
+      out.zoomFit = zsvg.getBoundingClientRect().width <= document.getElementById('diagram-zoom-stage').clientWidth;
+      zoom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      out.zoomClosed = zoom.hidden;
+    }
     out.imageSrc = (c.querySelector('img[alt="図"]').getAttribute('src') || '').slice(0, 5);
     out.brokenImage = c.querySelector('img[alt="無い図"]').classList.contains('broken-image');
     out.xss = window.__xss === undefined ? null : window.__xss;
@@ -234,6 +263,10 @@ function check(r) {
     'user-content-01-概要はじめに',
   ]);
   ok('CRLF の mermaid が図になる（オフライン）', r.mermaidSvg, r.mermaidSvg);
+  eq('横に広い図だけ「拡大」を出す（縮んでいる図だけ）', r.shrunk, [false, true]);
+  eq('「拡大」で原寸の図が全画面で開く', r.zoom, { open: true, natural: true, level: '100%' });
+  ok('「全体」で画面に収まる', r.zoomFit, r.zoomFit);
+  ok('Esc で閉じる', r.zoomClosed, r.zoomClosed);
   eq('相対パスの画像を zip から読む', r.imageSrc, 'blob:');
   ok('無い画像を示す', r.brokenImage, r.brokenImage);
   eq('生 HTML のスクリプトが動かない', r.xss, null);

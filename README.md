@@ -18,6 +18,7 @@ Markdown の文書一式（zip かフォルダ）を、ブラウザだけで読�
 ## できること
 
 - Markdown（GitHub 風の表・チェックボックスなど）と Mermaid の図を描く
+- 本文の幅に縮んで表示される横に広い図は、「拡大」で原寸の全画面表示にできる（拡大・縮小・画面に収める、Esc で閉じる）
 - 文書の間のリンク、`文書.md#節` や `#節` で節へ飛ぶ。見出しの ID は GitHub と同じ規則
 - ブラウザの「戻る／進む」で文書の間を行き来する
 - 相対パスの画像を zip・フォルダの中から読む
@@ -56,7 +57,7 @@ npm run check-zip -- docs.zip   # 手元の zip を開き、リンク切れ・�
 npm run lint                    # Biome で整形と Lint を確かめる（lint:fix で直す）
 ```
 
-`smoke` は、CP932 のファイル名・CRLF・XSS を仕込んだ zip を作って読み込ませ、21 項目を確かめる。
+`smoke` は、CP932 のファイル名・CRLF・XSS を仕込んだ zip を作って読み込ませ、25 項目を確かめる。
 ドラッグ＆ドロップとフォルダ選択は自動では確かめていない（人が操作して確かめる）。
 
 main・develop への push と Pull Request では、GitHub Actions（`.github/workflows/test.yml`）が同じことを行う。
