@@ -255,7 +255,7 @@
     contentEl.replaceChildren(...view.childNodes);
     contentEl.dataset.path = path;
     document.title = `${C.baseName(path) || source.name} - Markdown Viewer`;
-    centerWideTables();
+    watchTables();
     if (afterAttach) await afterAttach();
     scrollToAnchor(anchor);
   }
@@ -368,6 +368,17 @@
     }
   }
   window.addEventListener('resize', centerWideTables);
+
+  // 表の中の画像が後から読み込まれると、表の幅が変わる。表の大きさが変わったら揃え直す
+  const tableObserver =
+    typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(centerWideTables);
+
+  function watchTables() {
+    centerWideTables();
+    if (!tableObserver) return;
+    tableObserver.disconnect();
+    for (const table of contentEl.querySelectorAll(':scope > table')) tableObserver.observe(table);
+  }
 
   // ---- 図の拡大表示 -------------------------------------------------------
   // Mermaid の SVG は本文の幅に縮められる（max-width: 100%）。横に広い図は字が読めなくなるので、

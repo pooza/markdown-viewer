@@ -240,6 +240,16 @@ const PROBE = `
       const tr = t.getBoundingClientRect();
       const cr = c.getBoundingClientRect();
       const nested = c.querySelector('li table').getBoundingClientRect();
+      // 画像の読み込みなどで表が後から広がっても、揃え直される
+      // 本文より狭い表（a | b）に、本文より広いものを後から足す
+      const small = c.querySelector(':scope > table');
+      const grow = document.createElement('span');
+      grow.style.cssText = 'display:inline-block;width:1400px';
+      small.rows[1].cells[0].appendChild(grow);
+      await wait(200);
+      const gr = small.getBoundingClientRect();
+      out.regrown = gr.width > cr.width && Math.abs(gr.left + gr.right - cr.left - cr.right) < 2;
+      grow.remove();
       out.wideTable = {
         wider: tr.width > cr.width + 1,
         centered: Math.abs(tr.left + tr.right - cr.left - cr.right) < 2,
@@ -322,6 +332,7 @@ function check(r) {
   ]);
   eq('横長の表は表の中でスクロール', r.tableDisplay, 'block');
   eq('短い列は折り返さず、長い列は折り返す', r.nowrap, { short: true, long: false });
+  ok('…表が後から広がっても揃え直す', r.regrown, r.regrown);
   eq('窓が広ければ表は本文より広がり、中央に揃う', r.wideTable, {
     wider: true,
     centered: true,
