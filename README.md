@@ -70,7 +70,8 @@ lint・単体テスト・ビルドは Ubuntu、`smoke` は Edge の入ってい�
 
 - 作業は `develop`。リリースのときに `main` へマージする
 - 版は `package.json` の `version`。ビルド版の「このビューアについて」に版・ビルド日・コミットが出る
-- 配布物はビルド版 1 枚だけ。GitHub の Releases に添付する（`dist/` はリポジトリに入れない）
+- 配布物はビルド版 1 枚だけ。**タグを push すると GitHub Actions（`.github/workflows/release.yml`）がテスト・ビルドし、
+  `markdown-viewer.html` をそのタグのリリースにアセットとして添付する**（`dist/` はリポジトリに入れない）
 
 手順（例: 1.1.0 を出す）:
 
@@ -80,19 +81,22 @@ npm version 1.1.0 --no-git-tag-version
 npm run lint && npm test && npm run smoke
 git commit -am "release: v1.1.0"
 
-# 2. main へマージしてタグを打つ
+# 2. main へマージしてタグを打ち、push する（ここから先は Actions が行う）
 git checkout main
 git merge --ff-only develop
 git tag -a v1.1.0 -m "v1.1.0"
 git push origin main develop v1.1.0
-
-# 3. タグの状態でビルドし、Releases に添付する
-npm run build
-gh release create v1.1.0 dist/markdown-viewer.html --title "v1.1.0" --notes "変更点をここに書く"
 git checkout develop
 ```
 
-ビルドはタグを打った後に行う（「このビューアについて」のコミット表示が `-dirty` や古いコミットにならないように）。
+Actions は次を行う。⚠ タグと `package.json` の版が一致しないと止まる。
+
+1. タグをチェックアウトし、単体テストと `smoke`（ヘッドレス Edge）を通す
+2. ビルドする（「このビューアについて」にタグ名が出る）
+3. そのタグのリリースが無ければ作り（リリースノートは自動生成）、あればアセットだけ差し替える
+
+リリースノートは後から GitHub の画面で書き足してよい。
+既存のリリースにアセットを付け直すときは、Actions の画面から `release` を手動実行してタグを指定する。
 添付したファイルは `https://github.com/pooza/markdown-viewer/releases/latest/download/markdown-viewer.html` で常に最新版を取れる。
 
 ## ライブラリの版を上げる

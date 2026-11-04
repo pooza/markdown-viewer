@@ -1,0 +1,65 @@
+name: release
+
+# タグ（vX.Y.Z）を push すると、テストを通したうえでビルドし、
+# dist/markdown-viewer.html をそのタグのリリースにアセットとして添付する。
+# リリースが既にあれば（手で作った場合など）アセットだけを差し替える。
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'アセットを付け直すタグ（例: v1.0.0）'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    # smoke（ヘッドレス Edge）を通すので Windows の Runner で動かす
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          # git describe でタグ名をビルド版に出すため、タグを含む履歴を取る
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: タグと package.json の版が一致するか
+        shell: bash
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$TAG" ]; then
+            echo "::error::タグ $TAG と package.json の版 $version が一致しません"
+            exit 1
+          fi
+
+      - run: npm test
+      - run: npm run smoke
+      - run: npm run build
+
+      - name: リリースにアセットを添付する
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/markdown-viewer.html --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" dist/markdown-viewer.html --verify-tag --title "$TAG" --generate-notes --repo "$GITHUB_REPOSITORY"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: markdown-viewer-${{ env.TAG }}
+          path: dist/markdown-viewer.html
+          if-no-files-found: error
