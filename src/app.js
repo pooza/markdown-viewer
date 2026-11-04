@@ -86,21 +86,33 @@
     dragDepth = 0;
     document.body.classList.remove('dragging');
     // DataTransfer は await を挟むと読めなくなるので、ここで項目を取り出しておく
-    const items = Array.from(e.dataTransfer.items || [])
-      .filter((item) => item.kind === 'file')
-      .map((item) => (item.webkitGetAsEntry ? item.webkitGetAsEntry() : null));
+    const fileItems = Array.from(e.dataTransfer.items || []).filter((item) => item.kind === 'file');
+    const handles = fileItems.map((item) =>
+      item.getAsFileSystemHandle ? withTimeout(item.getAsFileSystemHandle(), 3000) : null,
+    );
+    const items = fileItems.map((item) => (item.webkitGetAsEntry ? item.webkitGetAsEntry() : null));
     const plainFiles = Array.from(e.dataTransfer.files || []);
-    await guarded(() => openDropped(items, plainFiles));
+    await guarded(() => openDropped(items, plainFiles, handles));
   });
+
+  // 失敗・時間切れは null（getAsFileSystemHandle は環境によって解決しないことがある）
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      promise.catch(() => null),
+      new Promise((r) => setTimeout(() => r(null), ms)),
+    ]);
+  }
 
   function hasFiles(e) {
     return e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
   }
 
-  // メールの添付・Explorer で開いた zip の中・オンデマンドのクラウドのファイルなど、実体がまだ
-  // ディスクに無いものは entry.file() が EncodingError（A URI supplied to the API was malformed…）で
-  // 失敗する。DataTransfer の File は読めるので、zip 1 つはそれを使い、それ以外も失敗したらそれに替える。
-  async function openDropped(entries, plainFiles) {
+  // file:// で開いたページでは、FileSystem API（webkitGetAsEntry）の entry.file() が
+  // EncodingError（A URI supplied to the API was malformed…）で失敗する。そのため
+  // - zip 1 つは DataTransfer の File をそのまま使う
+  // - フォルダ・複数ファイルは File System Access API（getAsFileSystemHandle）で読む
+  // - それも無いブラウザでは entry で読み、一番上のファイルは失敗したら DataTransfer の File に替える
+  async function openDropped(entries, plainFiles, handlePromises = []) {
     const valid = entries.filter(Boolean);
     // 「〜.zip」という名前のフォルダは除く（entry があればファイルであることを確かめる）
     const isZipFile =
@@ -109,6 +121,13 @@
       (valid.length === 0 || (valid.length === 1 && valid[0].isFile));
     if (isZipFile) {
       return openZipFile(plainFiles[0]);
+    }
+    const handles = (await Promise.all(handlePromises)).filter(Boolean);
+    if (handles.length > 0) {
+      const collected = [];
+      for (const handle of handles) await collectHandle(handle, '', collected);
+      const name = handles.length === 1 ? handles[0].name : 'ドロップしたファイル';
+      return openSource(name, fromFiles(collected));
     }
     if (valid.length === 0) {
       // webkitGetAsEntry が使えない環境。ファイルだけ受け取る
@@ -120,9 +139,28 @@
       );
     }
     const collected = [];
-    for (const entry of valid) await collectEntry(entry, collected, plainFiles);
+    try {
+      for (const entry of valid) await collectEntry(entry, collected, plainFiles);
+    } catch (error) {
+      if (error.name === 'EncodingError' && valid.some((entry) => entry.isDirectory)) {
+        throw new Error(
+          'このブラウザでは、ドロップしたフォルダの中身を読めませんでした。「フォルダを開く」で選ぶか、zip にしてドロップしてください。',
+        );
+      }
+      throw error;
+    }
     const name = valid.length === 1 ? valid[0].name : 'ドロップしたファイル';
     return openSource(name, fromFiles(collected));
+  }
+
+  async function collectHandle(handle, dir, out) {
+    const path = dir ? `${dir}/${handle.name}` : handle.name;
+    if (C.isIgnored(handle.kind === 'directory' ? `${path}/x` : path)) return;
+    if (handle.kind === 'file') {
+      out.push({ path, file: await handle.getFile() });
+    } else {
+      for await (const child of handle.values()) await collectHandle(child, path, out);
+    }
   }
 
   function entryFile(entry) {

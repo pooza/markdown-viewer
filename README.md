@@ -61,7 +61,7 @@ npm run lint                    # Biome で整形と Lint を確かめる（lint
 ```
 
 `smoke` は、CP932 のファイル名・CRLF・XSS を仕込んだ zip を作って読み込ませ、26 項目を確かめる。
-ドラッグ＆ドロップとフォルダ選択は自動では確かめていない（人が操作して確かめる）。
+ドラッグ＆ドロップとフォルダ選択は自動では確かめていない（Edge の実機で、zip・フォルダ・複数ファイルのドロップを確かめた）。
 
 main・develop への push と Pull Request では、GitHub Actions（`.github/workflows/test.yml`）が同じことを行う。
 lint・単体テスト・ビルドは Ubuntu、`smoke` は Edge の入っている Windows の Runner で動く。

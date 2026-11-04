@@ -29,13 +29,18 @@
 - mermaid・DOMPurify の中に `</body>` という文字列がある。ビルドで何かを差し込むときは、必ず**最後の** `</body>` の前（`lastIndexOf`）
 - `src/` はモジュールではないので `'use strict'` を残す（Biome の `noRedundantUseStrict` は切ってある）
 - 見出し ID は GitHub と同じ規則（`user-content-` 接頭辞で付け、リンクは JS で解決する）。変えると既存の文書のアンカーが切れる
+- **file:// で開いたページでは、ドロップの `entry.file()`（webkitGetAsEntry）が EncodingError で失敗する**
+  （「A URI supplied to the API was malformed…」）。zip 1 つは `dataTransfer.files` の File、フォルダは
+  `getAsFileSystemHandle()` で読んでいる。ドロップの処理を変えるときはここを崩さない
+- ドロップは `Input.dispatchDragEvent`（DevTools プロトコル）で模擬できるが、模擬では `getAsFileSystemHandle()` が
+  解決しない（ヘッドレス）か AbortError（画面あり）になる。フォルダのドロップは実機で確かめる
 - `vendor/` を手で書き換えない。版を上げる手順は README の「ライブラリの版を上げる」。ハッシュが `vendor/VERSIONS.json` と合わないとビルドが止まる
 
 ## 自動では確かめていないこと
 
 変更がここに触れるときは、人に実機で確かめてもらう。
 
-- ドラッグ＆ドロップ・フォルダ選択（#3）
+- ドラッグ＆ドロップ（zip・フォルダ・複数ファイル）とフォルダ選択。2026-11 に Edge の実機で確かめた（#3）
 - 古い Edge（Chromium 初期の版）での動作
 - Windows の Explorer の「圧縮」で作った zip（CP932 のファイル名は自作の zip でだけ確かめている）
 
