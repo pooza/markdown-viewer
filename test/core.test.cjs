@@ -107,3 +107,21 @@ test('createSlugger: 重複には -1, -2 を付ける', () => {
   assert.equal(s.slug('節'), '節-2');
   assert.equal(s.slug('節-1'), '節-1-1');
 });
+
+test('displayWidth: 半角 1・全角 2', () => {
+  assert.equal(C.displayWidth('VARCHAR2(7)'), 11);
+  assert.equal(C.displayWidth('加入者番号'), 10);
+  assert.equal(C.displayWidth('ｶﾅ'), 2);
+  assert.equal(C.displayWidth(''), 0);
+});
+
+test('shortColumns: どのセルも短い列だけを返す', () => {
+  const rows = [
+    ['#', '項目名', '説明'],
+    ['1', '記録年月', 'ランク情報を記録したときの年月。6 桁で左をゼロで埋める'],
+    ['2', '加入者番号'],
+  ];
+  assert.deepEqual(C.shortColumns(rows, 30), [0, 1]);
+  assert.deepEqual(C.shortColumns(rows, 4), [0]);
+  assert.deepEqual(C.shortColumns([], 30), []);
+});
