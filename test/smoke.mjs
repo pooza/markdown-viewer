@@ -197,7 +197,13 @@ const PROBE = `
         level: document.getElementById('diagram-zoom-level').textContent,
       };
       zoom.querySelector('[data-zoom="fit"]').click();
-      out.zoomFit = zsvg.getBoundingClientRect().width <= document.getElementById('diagram-zoom-stage').clientWidth;
+      const stage = document.getElementById('diagram-zoom-stage');
+      out.zoomFit = zsvg.getBoundingClientRect().width <= stage.clientWidth;
+      // 画面の 10 倍より大きい図でも「全体」で収まる（手動の縮小の下限 10% で止めない）
+      stage.style.width = '100px';
+      zoom.querySelector('[data-zoom="fit"]').click();
+      out.zoomFitTiny = zsvg.getBoundingClientRect().width <= stage.clientWidth;
+      stage.style.width = '';
       zoom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       out.zoomClosed = zoom.hidden;
     }
@@ -266,6 +272,7 @@ function check(r) {
   eq('横に広い図だけ「拡大」を出す（縮んでいる図だけ）', r.shrunk, [false, true]);
   eq('「拡大」で原寸の図が全画面で開く', r.zoom, { open: true, natural: true, level: '100%' });
   ok('「全体」で画面に収まる', r.zoomFit, r.zoomFit);
+  ok('…画面の 10 倍より大きい図でも収まる', r.zoomFitTiny, r.zoomFitTiny);
   ok('Esc で閉じる', r.zoomClosed, r.zoomClosed);
   eq('相対パスの画像を zip から読む', r.imageSrc, 'blob:');
   ok('無い画像を示す', r.brokenImage, r.brokenImage);

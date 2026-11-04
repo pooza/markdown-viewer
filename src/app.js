@@ -408,18 +408,24 @@
     zoomEl.focus();
   }
 
+  // 画面に収まる倍率（原寸より大きくはしない）
+  function fitScale() {
+    const width = zoomStage.clientWidth - 32;
+    const height = zoomStage.clientHeight - 32;
+    return Math.min(width / zoomBase.width, height / zoomBase.height, 1);
+  }
+
+  // 下限は 10%。ただし画面の 10 倍より大きい図は、収まる倍率まで縮められるようにする
   function setZoom(scale) {
     if (!zoomSvg) return;
-    zoomScale = Math.min(4, Math.max(0.1, scale));
+    zoomScale = Math.min(4, Math.max(Math.min(0.1, fitScale()), scale));
     zoomSvg.setAttribute('width', String(zoomBase.width * zoomScale));
     zoomSvg.setAttribute('height', String(zoomBase.height * zoomScale));
     $('diagram-zoom-level').textContent = `${Math.round(zoomScale * 100)}%`;
   }
 
   function fitZoom() {
-    const width = zoomStage.clientWidth - 32;
-    const height = zoomStage.clientHeight - 32;
-    setZoom(Math.min(width / zoomBase.width, height / zoomBase.height, 1));
+    setZoom(fitScale());
   }
 
   function closeZoom() {
