@@ -354,13 +354,14 @@
   }
 
   // ---- 表の幅 -------------------------------------------------------------
-  // 文章は読みやすい幅（980px）のままにし、表だけは窓の幅まで広げる（CSS の max-width: 100cqw）。
+  // 文章は読みやすい幅（980px）のままにし、本文の直下の表だけは窓の幅まで広げる（CSS の max-width: 100cqw）。
+  // リストや引用の中の表は字下げの分だけ右にずれているので広げない（親の幅のまま）。
   // 本文より広くなった表は、はみ出した分の半分だけ左へずらして本文の中央に揃える。
 
   const NOWRAP_WIDTH = 30; // 半角 30 字（全角 15 字）以下のセルだけの列は折り返さない
 
   function centerWideTables() {
-    for (const table of contentEl.querySelectorAll('table')) {
+    for (const table of contentEl.querySelectorAll(':scope > table')) {
       table.style.marginLeft = '';
       const extra = table.offsetWidth - contentEl.clientWidth;
       if (extra > 0) table.style.marginLeft = `${-extra / 2}px`;

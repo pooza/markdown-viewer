@@ -127,6 +127,12 @@ ${WIDE}
 | ---: | --- | --- |
 | 1 | 記録年月 | ${LONG} |
 | 2 | 加入者番号 | 短い |
+
+- リストの中の表
+
+  | 項目名 | 説明 |
+  | --- | --- |
+  | 入れ子 | ${LONG} |
 `);
 
 const DOC = `# Doc
@@ -233,7 +239,12 @@ const PROBE = `
       window.dispatchEvent(new Event('resize'));
       const tr = t.getBoundingClientRect();
       const cr = c.getBoundingClientRect();
-      out.wideTable = { wider: tr.width > cr.width + 1, centered: Math.abs(tr.left + tr.right - cr.left - cr.right) < 2 };
+      const nested = c.querySelector('li table').getBoundingClientRect();
+      out.wideTable = {
+        wider: tr.width > cr.width + 1,
+        centered: Math.abs(tr.left + tr.right - cr.left - cr.right) < 2,
+        nestedInside: nested.right <= cr.right + 1,
+      };
       scroller.style.flex = '';
       scroller.style.width = '';
       window.dispatchEvent(new Event('resize'));
@@ -311,7 +322,11 @@ function check(r) {
   ]);
   eq('横長の表は表の中でスクロール', r.tableDisplay, 'block');
   eq('短い列は折り返さず、長い列は折り返す', r.nowrap, { short: true, long: false });
-  eq('窓が広ければ表は本文より広がり、中央に揃う', r.wideTable, { wider: true, centered: true });
+  eq('窓が広ければ表は本文より広がり、中央に揃う', r.wideTable, {
+    wider: true,
+    centered: true,
+    nestedInside: true,
+  });
   eq('別文書の節へのリンクで文書を開く', r.cross?.path, 'sub/doc.md');
   ok(
     '…そしてその節までスクロールする',

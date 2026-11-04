@@ -259,17 +259,21 @@
         }
 
         /* 横に長い表は表の中だけで横スクロールさせる。
-           表は本文の幅を超えて窓の幅（#content の中）まで広がってよい（中央揃えは app.js）。
+           本文の直下の表は、本文の幅を超えて窓の幅（#content の中）まで広がってよい（中央揃えは app.js）。
            100cqw を解釈できない古いブラウザでは 100%（本文の幅）のまま */
         #markdown-content table {
             border-collapse: collapse;
             display: block;
             width: max-content;
             max-width: 100%;
-            max-width: 100cqw;
             overflow-x: auto;
             margin-bottom: 16px;
             font-size: 14px;
+        }
+
+        /* 本文の直下の表だけ。リストや引用の中の表は字下げの分ずれるので、親の幅のまま */
+        #markdown-content > table {
+            max-width: 100cqw;
         }
 
         #markdown-content table th,
