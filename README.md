@@ -67,7 +67,8 @@ main・develop への push と Pull Request では、GitHub Actions（`.github/w
 lint・単体テスト・ビルドは Ubuntu、`smoke` は Edge の入っている Windows の Runner で動く。
 そこでビルドした版は実行結果の Artifacts から取れる。
 
-整形と Lint は [Biome](https://biomejs.dev/)。設定は `biome.json`（2 スペース、1 行 100 桁、シングルクォート、末尾カンマあり）。
+整形と Lint は [Biome](https://biomejs.dev/)。共有の設定 [gobou](https://github.com/pooza/gobou) を `biome.json` で継承している（2 スペース、1 行 100 桁、シングルクォート、末尾カンマあり）。
+Biome は gobou と同じ版に固定する（`^` を付けない）。
 `src/` はモジュールではない普通の script なので `'use strict'` を残す（`noRedundantUseStrict` を切っている）。
 
 ## ブランチとリリース
@@ -110,12 +111,13 @@ Actions は次を行う。⚠ タグと `package.json` の版が一致しない�
 3. `npm run smoke` で確かめる
 
 ビルドは `vendor/` のハッシュが `VERSIONS.json` と一致しないと止まる（`npm run vendor:check` でも確かめられる）。
-| ライブラリ | 版 | 用途 | ライセンス |
-| --- | --- | --- | --- |
-| JSZip | 3.10.1 | zip の読み込み | MIT または GPLv3 |
-| marked | 18.0.11 | Markdown の描画 | MIT |
-| DOMPurify | 3.4.17 | 描画結果の無害化 | Apache-2.0 または MPL-2.0 |
-| mermaid | 11.17.2 | 図の描画 | MIT |
+
+| ライブラリ | 版      | 用途             | ライセンス                |
+| ---------- | ------- | ---------------- | ------------------------- |
+| JSZip      | 3.10.1  | zip の読み込み   | MIT または GPLv3          |
+| marked     | 18.0.11 | Markdown の描画  | MIT                       |
+| DOMPurify  | 3.4.17  | 描画結果の無害化 | Apache-2.0 または MPL-2.0 |
+| mermaid    | 11.17.2 | 図の描画         | MIT                       |
 
 ライセンス全文はビルド版にも埋め込んであり、画面左下の「このビューアについて」で読める。
 
