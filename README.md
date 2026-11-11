@@ -123,4 +123,4 @@ Actions は次を行う。⚠ タグと `package.json` の版が一致しない�
 
 MIT（[LICENSE](LICENSE)）。同梱ライブラリはそれぞれのライセンスに従う（上の表）。
 
-元は gist（https://gist.github.com/pooza/0f76c04cdc6c92f5569d3d4c071b9b7b）で配っていた 1 枚の HTML。
+元は gist（ https://gist.github.com/pooza/0f76c04cdc6c92f5569d3d4c071b9b7b ）で配っていた 1 枚の HTML。
