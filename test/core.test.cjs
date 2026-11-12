@@ -125,3 +125,11 @@ test('shortColumns: どのセルも短い列だけを返す', () => {
   assert.deepEqual(C.shortColumns(rows, 4), [0]);
   assert.deepEqual(C.shortColumns([], 30), []);
 });
+
+test('isZipName: 拡張子 .zip を大文字小文字によらず見分ける', () => {
+  assert.equal(C.isZipName('docs.zip'), true);
+  assert.equal(C.isZipName('DOCS.ZIP'), true);
+  assert.equal(C.isZipName('README.md'), false);
+  assert.equal(C.isZipName('zip.md'), false);
+  assert.equal(C.isZipName('archive.zip.md'), false);
+});

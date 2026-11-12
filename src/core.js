@@ -160,6 +160,10 @@
   }
 
   // 'markdown' | 'text' | 'image' | 'other'
+  function isZipName(name) {
+    return /\.zip$/i.test(name);
+  }
+
   function kindOf(path) {
     const ext = extOf(path);
     if (MARKDOWN_EXTS.has(ext)) return 'markdown';
@@ -273,6 +277,7 @@
     splitHref,
     isIgnored,
     extOf,
+    isZipName,
     kindOf,
     mimeOf,
     findReadme,

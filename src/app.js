@@ -34,7 +34,7 @@
         '\n\nビルド版（dist/markdown-viewer.html）を使っているか確かめてください。' +
         'src/viewer.html を直接開く場合は vendor/ が必要です。',
     );
-    for (const id of ['open-zip', 'open-folder', 'search-box']) $(id).disabled = true;
+    for (const id of ['open-file', 'open-folder', 'search-box']) $(id).disabled = true;
     return;
   }
 
@@ -44,13 +44,13 @@
 
   // ---- 読み込み口 ---------------------------------------------------------
 
-  $('open-zip').addEventListener('click', () => $('zip-input').click());
+  $('open-file').addEventListener('click', () => $('file-input').click());
   $('open-folder').addEventListener('click', () => $('folder-input').click());
 
-  $('zip-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
+  $('file-input').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
     e.target.value = ''; // 同じファイルを選び直せるように
-    if (file) await guarded(() => openZipFile(file));
+    if (files.length > 0) await guarded(() => openPicked(files));
   });
 
   $('folder-input').addEventListener('change', async (e) => {
@@ -61,6 +61,19 @@
     const rootName = entries[0].path.split('/')[0];
     await guarded(() => openSource(rootName, fromFiles(entries)));
   });
+
+  // 「ファイルを開く」で選んだもの。zip 1 つならその中身、Markdown などはそのファイルだけを開く
+  async function openPicked(files) {
+    const zips = files.filter((f) => C.isZipName(f.name));
+    if (zips.length > 0) {
+      if (files.length > 1) {
+        throw new Error('zip は 1 つだけ選んでください（ほかのファイルと一緒には開けません）。');
+      }
+      return openZipFile(zips[0]);
+    }
+    const name = files.length === 1 ? files[0].name : '選んだファイル';
+    return openSource(name, fromFiles(files.map((f) => ({ path: f.name, file: f }))));
+  }
 
   // ドラッグ＆ドロップ。zip 1 つならその中身、それ以外（フォルダ・複数ファイル）はまとめて開く。
   let dragDepth = 0;
@@ -117,7 +130,7 @@
     // 「〜.zip」という名前のフォルダは除く（entry があればファイルであることを確かめる）
     const isZipFile =
       plainFiles.length === 1 &&
-      /\.zip$/i.test(plainFiles[0].name) &&
+      C.isZipName(plainFiles[0].name) &&
       (valid.length === 0 || (valid.length === 1 && valid[0].isFile));
     if (isZipFile) {
       return openZipFile(plainFiles[0]);
@@ -132,7 +145,7 @@
     }
     if (valid.length === 0) {
       // webkitGetAsEntry が使えない環境。ファイルだけ受け取る
-      if (plainFiles.length === 1 && /\.zip$/i.test(plainFiles[0].name))
+      if (plainFiles.length === 1 && C.isZipName(plainFiles[0].name))
         return openZipFile(plainFiles[0]);
       return openSource(
         'ドロップしたファイル',

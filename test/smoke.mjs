@@ -285,6 +285,26 @@ const PROBE = `
 
     document.getElementById('about-link').click();
     out.about = { build: c.querySelector('p').textContent, licenses: c.textContent.includes('==== mermaid') };
+
+    // 「ファイルを開く」: Markdown を複数・zip と一緒は断る・zip 1 つ
+    const pick = (files) => {
+      const input = document.getElementById('file-input');
+      const dt = new DataTransfer();
+      for (const f of files) dt.items.add(f);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    };
+    pick([new File(['# 二つ目\n'], 'b.md'), new File(['# 一つ目\n\n[次](b.md)\n'], 'a.md')]);
+    await until(() => c.dataset.path === 'a.md');
+    out.pickedMd = {
+      first: MdvApp.currentPath,
+      h1: (c.querySelector('h1') || {}).textContent,
+      link: !!link('次') && !link('次').classList.contains('broken-link'),
+    };
+    pick([new File([buf], 'fixture.zip'), new File(['# x\n'], 'x.md')]);
+    out.pickedMixed = !!(await until(() => (c.querySelector('.error') || {}).textContent));
+    pick([new File([buf], 'fixture.zip')]);
+    out.pickedZip = await until(() => c.dataset.path === 'README.md' && MdvApp.currentPath);
   } catch (e) {
     out.error = String((e && e.stack) || e);
   }
@@ -306,6 +326,9 @@ function check(r) {
   const ok = (label, cond, actual) => results.push({ label, ok: !!cond, actual });
 
   ok('例外なく最後まで動く', !r.error, r.error);
+  eq('「ファイルを開く」で Markdown を複数選べる', r.pickedMd, { first: 'a.md', h1: '一つ目', link: true });
+  ok('…zip とほかのファイルを一緒に選ぶと断る', r.pickedMixed, r.pickedMixed);
+  eq('…zip 1 つならその中身を開く', r.pickedZip, 'README.md');
   eq('README を最初に開く', r.first, 'README.md');
   eq('見出しに GitHub と同じ ID', r.headingIds, [
     'user-content-テスト文書',
