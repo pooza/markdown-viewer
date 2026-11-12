@@ -459,10 +459,10 @@
     <div id="sidebar">
         <div id="file-input-container">
             <div class="open-buttons">
-                <button type="button" class="open-button" id="open-zip">zip を開く</button>
+                <button type="button" class="open-button" id="open-file">ファイルを開く</button>
                 <button type="button" class="open-button" id="open-folder">フォルダを開く</button>
             </div>
-            <input type="file" id="zip-input" class="hidden-input" accept=".zip" />
+            <input type="file" id="file-input" class="hidden-input" accept=".zip,.md,.markdown" multiple />
             <input type="file" id="folder-input" class="hidden-input" webkitdirectory multiple />
             <div id="source-name"></div>
             <input type="text" id="search-box" placeholder="ファイル名で絞り込み" />
@@ -472,7 +472,7 @@
     </div>
     <div id="content">
         <div id="markdown-content">
-            <div id="loading">zip ファイルかフォルダを選ぶか、<br>この画面にドラッグ＆ドロップしてください</div>
+            <div id="loading">zip・Markdown ファイル・フォルダを選ぶか、<br>この画面にドラッグ＆ドロップしてください</div>
         </div>
     </div>
     <div id="drop-overlay">ここにドロップ</div>
