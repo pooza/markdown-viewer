@@ -59,7 +59,7 @@ npm run build                   # dist/markdown-viewer.html を作る
 npm test                        # core.js の単体テスト
 npm run smoke                   # ビルド版をネット遮断のヘッドレス Edge で開いて確かめる
 npm run check-zip -- docs.zip   # 手元の zip を開き、リンク切れ・画像切れ・図の失敗を数える
-npm run lint                    # Biome で整形と Lint を確かめる（lint:fix で直す）
+npm run lint                    # Biome で整形と Lint を確かめる（lint:fix で直す。直したら build と smoke も通す）
 ```
 
 `smoke` は、CP932 のファイル名・CRLF・XSS を仕込んだ zip を作って読み込ませ、26 項目を確かめる。
@@ -69,7 +69,8 @@ main・develop への push と Pull Request では、GitHub Actions（`.github/w
 lint・単体テスト・ビルドは Ubuntu、`smoke` は Edge の入っている Windows の Runner で動く。
 そこでビルドした版は実行結果の Artifacts から取れる。
 
-整形と Lint は [Biome](https://biomejs.dev/)。設定は `biome.json`（2 スペース、1 行 100 桁、シングルクォート、末尾カンマあり）。
+整形と Lint は [Biome](https://biomejs.dev/)。共有の設定 [gobou](https://github.com/pooza/gobou) を `biome.json` で継承している（2 スペース、1 行 100 桁、シングルクォート、末尾カンマあり）。
+Biome は gobou と同じ版に固定し（`^` を付けない）、gobou はタグで固定する。対象は `vendor/` と `*.md` を除く全体で、`src/viewer.html` も整形する。
 `src/` はモジュールではない普通の script なので `'use strict'` を残す（`noRedundantUseStrict` を切っている）。
 
 ## ブランチとリリース
